@@ -1,0 +1,23 @@
+[package]
+name = "apate"
+version = "0.0.1"
+edition = "2024"
+homepage = "https://github.com/rustrum/apate"
+repository = "https://github.com/rustrum/apate.git"
+description = "Any API mocking service for different types of tests"
+license-file = "LICENSE"
+
+[dependencies]
+anyhow = "1"
+actix-web = { version = "4.11", features = ["rustls"] }
+actix-router = "0.5"
+async-lock = "3.4"
+env_logger = "0.11"
+hex = "0.4"
+jsonpath-rust = "1.0"
+log = "0.4"
+minijinja = { version = "2.12.0", features = ["loader"] }
+rand = "0.9"
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+toml = "0.9"
