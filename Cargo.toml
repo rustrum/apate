@@ -1,6 +1,6 @@
 [package]
 name = "apate"
-version = "0.0.1"
+version = "0.0.2"
 edition = "2024"
 homepage = "https://github.com/rustrum/apate"
 repository = "https://github.com/rustrum/apate.git"
