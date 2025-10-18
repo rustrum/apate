@@ -1,5 +1,6 @@
 use std::{env, io::Read as _};
 
+use anyhow::bail;
 use serde::{Deserialize, Serialize};
 
 use crate::deceit::Deceit;
@@ -32,7 +33,9 @@ impl AppConfig {
         for path in Self::read_paths_from_env() {
             log::debug!("Parsing TOML config from: {}", path);
 
-            let mut file = std::fs::File::open(path)?;
+            let mut file =
+                std::fs::File::open(&path).map_err(|e| anyhow::anyhow!("Can't parse {path}. {e}"))?;
+
             let mut buf = Vec::new();
             file.read_to_end(&mut buf)?;
 

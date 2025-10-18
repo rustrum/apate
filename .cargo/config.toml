@@ -1,2 +1,2 @@
 [env]
-APATHE_SPECS_FILE_1 = "test-specs.toml"
+APATHE_SPECS_FILE_1 = "examples/apate-specs.toml"

@@ -2,6 +2,7 @@ mod config;
 mod deceit;
 mod matchers;
 
+use std::collections::HashMap;
 use std::net::Ipv4Addr;
 
 use actix_router::{Path, ResourceDef};
@@ -15,7 +16,7 @@ use async_lock::RwLock;
 
 use crate::config::{ApateSpecs, AppConfig};
 
-const DEFAULT_RUST_LOG: &str = "info,api_stub_server=debug";
+const DEFAULT_RUST_LOG: &str = "info,apate=debug";
 
 const ADMIN_API: &str = "/apate";
 const ADMIN_API_PREPEND: &str = "/apate/prepend";
@@ -32,15 +33,19 @@ impl ApateContext {
         }
     }
 }
+
+#[derive(Debug)]
 pub struct RequestContext<'a> {
     pub req: &'a HttpRequest,
     pub body: &'a Bytes,
     pub path: &'a Path<&'a str>,
+    pub args_query: &'a HashMap<String, String>,
 }
 
 pub fn apate_init_config() -> anyhow::Result<AppConfig> {
     env_logger::Builder::from_env(env_logger::Env::default().default_filter_or(DEFAULT_RUST_LOG))
         .init();
+
     AppConfig::try_new()
 }
 
@@ -82,6 +87,14 @@ async fn deceit_api_handler(
     // TODO deal with unwrap
     let deceit = &state.specs.read().await.deceit;
 
+    let mut args_query: HashMap<String, String> = Default::default();
+    let qstring = req.uri().query().unwrap_or_default();
+    if let Ok(qargs) = serde_urlencoded::from_str::<HashMap<String, String>>(&qstring) {
+        args_query = qargs;
+    } else {
+        log::error!("Can't decode query string from URL");
+    }
+
     for d in deceit {
         let mut path = Path::new(req.path());
 
@@ -94,7 +107,10 @@ async fn deceit_api_handler(
             req,
             body,
             path: &path,
+            args_query: &args_query,
         };
+
+        log::debug!("{ctx:#?}");
 
         let Some(idx) = d.has_match(&ctx) else {
             continue;
@@ -102,12 +118,12 @@ async fn deceit_api_handler(
 
         return match d.process_response(idx, &ctx) {
             Ok(good) => good,
-            Err(e) => HttpResponse::InternalServerError().body(format!("It happened! {e}")),
+            Err(e) => HttpResponse::InternalServerError().body(format!("It happened! {e}\n")),
         };
     }
 
     HttpResponse::NotFound().body(format!(
-        "Nothing can handle your requiest with path: {}",
+        "Nothing can handle your requiest with path: {}\n",
         req.path()
     ))
 }

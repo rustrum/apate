@@ -1,0 +1,79 @@
+# Test specification which will be used with `cargo run`
+
+# Each URI moking unit called "deceit"
+# This deceit mock listing users
+[[deceit]]
+uris = ["/user/list"]
+headers = [["Content-Type", "application/json"]]
+matchers = [{ type = "method", eq = "GET" }]
+
+[[deceit.responses]]
+matchers = [{ type = "query_arg", name = "name", value = "Ivan" }]
+content = """
+[
+    {"id":42, "name":"Ivan", "surname": "Ivanov"},
+]
+
+"""
+
+[[deceit.responses]]
+matchers = [{ type = "query_arg", name = "name", value = "Adolph" }]
+content = """
+[
+    {"id":740, "name":"Adolph", "surname": "Greenberg"},
+    {"id":741, "name":"Adolph", "surname": "Shtern"},
+    {"id":742, "name":"Adolph", "surname": "Feldman"}
+]
+
+"""
+
+[[deceit.responses]]
+code = 503
+matchers = [{ type = "query_arg", name = "name", value = "Rajesh" }]
+content = """
+{"message": "Impossible to list them all"}
+
+"""
+
+[[deceit.responses]]
+content = """
+[
+    {"id":42, "name":"Ivan", "surname": "Ivanov"},
+    {"id":740, "name":"Adolph", "surname": "Greenberg"},
+    {"id":741, "name":"Adolph", "surname": "Shtern"},
+    {"id":742, "name":"Adolph", "surname": "Feldman"}
+]
+
+"""
+
+# Another deceit for adding user
+[[deceit]]
+uris = ["/user/add"]
+json_request = true
+headers = [["Content-Type", "application/json"]]
+matchers = [{ type = "method", eq = "POST" }]
+
+[[deceit.responses]]
+code = 416
+matchers = [{ type = "json", path = "$.name", eq = "Rajesh" }]
+content = """
+{"message": "Rajesh? Too mach of them in this world already! Be creative, find another name!"}
+
+"""
+
+[[deceit.responses]]
+code = 406
+matchers = [
+    { type = "json", path = "$.name", eq = "Adolph" },
+    { type = "json", path = "$.surname", eq = "Hitler" },
+]
+content = """
+{"message": "Nun wird Terror mit Terror beantwortet"}
+
+"""
+
+[[deceit.responses]]
+content = """
+{ "id": 42, "name": "{{ input_json.name }}", "surname": "{{ input_json.surname }}" }
+
+"""

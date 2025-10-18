@@ -6,6 +6,10 @@ use crate::RequestContext;
 #[derive(Clone, Debug, Deserialize, Serialize)]
 #[serde(tag = "type", rename_all = "snake_case")]
 pub enum Matcher {
+    QueryArg {
+        name: String,
+        value: String,
+    },
     Method {
         eq: String,
     },
@@ -24,10 +28,18 @@ pub enum Matcher {
 
 pub fn is_matcher_approves(matcher: &Matcher, ctx: &RequestContext) -> bool {
     match matcher {
+        Matcher::QueryArg { name, value } => match_query_arg(name.as_str(), value.as_str(), ctx),
         Matcher::Method { eq } => match_method(eq.as_str(), ctx),
         Matcher::Header { key, value } => match_header(key.as_str(), value.as_str(), ctx),
         Matcher::Json { path, eq } => match_json(path.as_str(), eq.as_str(), ctx),
     }
+}
+
+pub fn match_query_arg(name: &str, value: &str, ctx: &RequestContext) -> bool {
+    let Some(qvalue) = ctx.args_query.get(name) else {
+        return false;
+    };
+    value == qvalue.as_str()
 }
 
 pub fn match_method(method: &str, ctx: &RequestContext) -> bool {

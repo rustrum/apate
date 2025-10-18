@@ -1,7 +1,8 @@
 use std::collections::HashMap;
 
-use actix_web::{HttpResponse, body::BoxBody, http::StatusCode};
+use actix_web::{HttpResponse, HttpResponseBuilder, body::BoxBody, http::StatusCode};
 use anyhow::bail;
+use log::RecordBuilder;
 use rand::{Rng, RngCore as _};
 use serde::{Deserialize, Serialize};
 
@@ -10,14 +11,12 @@ use crate::{
     matchers::{Matcher, is_matcher_approves},
 };
 
+const DEFAULT_RESPONSE_CODE: u16 = 200;
+
 /// Unit responsible for mocking actual URIs
 #[derive(Clone, Debug, Deserialize, Serialize)]
 pub struct Deceit {
     pub uris: Vec<String>,
-
-    /// Default response code in this deceit.
-    #[serde(default)]
-    pub code: u16,
 
     /// Common headers for all responses in this deceit.
     #[serde(default)]
@@ -47,6 +46,10 @@ impl Deceit {
         }
 
         for (idx, dr) in self.responses.iter().enumerate() {
+            if dr.matchers.is_empty() {
+                // Empty matchers - always yes
+                return Some(idx);
+            }
             for matcher in &dr.matchers {
                 if is_matcher_approves(matcher, ctx) {
                     return Some(idx);
@@ -151,16 +154,13 @@ impl DeceitResponse {
 
         let result = self.render(&rctx)?;
 
-        let response_code = if let Some(code) = self.code {
-            code
-        } else {
-            deceit.code
-        };
+        let response_code = self.code.unwrap_or(DEFAULT_RESPONSE_CODE);
 
-        let response: HttpResponse =
-            HttpResponse::with_body(StatusCode::from_u16(response_code)?, BoxBody::new(result));
+        let mut rbuilder: HttpResponseBuilder =
+            HttpResponseBuilder::new(StatusCode::from_u16(response_code)?);
+        insert_response_headers(&mut rbuilder, &deceit.headers, &self.headers);
 
-        Ok(response)
+        Ok(rbuilder.body(result))
     }
 
     pub fn render(&self, ctx: &ResponseContext) -> anyhow::Result<String> {
@@ -177,6 +177,19 @@ impl DeceitResponse {
                 Ok(response)
             }
         }
+    }
+}
+
+fn insert_response_headers(
+    rbuilder: &mut HttpResponseBuilder,
+    parent_headers: &[(String, String)],
+    headers: &[(String, String)],
+) {
+    for (k, v) in parent_headers {
+        rbuilder.insert_header((k.as_str(), v.as_str()));
+    }
+    for (k, v) in headers {
+        rbuilder.insert_header((k.as_str(), v.as_str()));
     }
 }
 
