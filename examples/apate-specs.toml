@@ -46,6 +46,7 @@ content = """
 
 """
 
+
 # Another deceit for adding user
 [[deceit]]
 uris = ["/user/add"]
@@ -75,5 +76,46 @@ content = """
 [[deceit.responses]]
 content = """
 { "id": 42, "name": "{{ input_json.name }}", "surname": "{{ input_json.surname }}" }
+
+"""
+
+
+# Get user deceit
+[[deceit]]
+uris = ["/user/{user_id}", "/user"]
+headers = [["Content-Type", "application/json"]]
+matchers = [{ type = "method", eq = "GET" }]
+
+# This would match only for /user?id=42
+[[deceit.responses]]
+matchers = [{ type = "query_arg", name = "id", value = "42" }]
+content = """
+{"id":42, "name":"Ivan", "surname": "Ivanov"},
+
+"""
+
+# This one is /user/740
+[[deceit.responses]]
+matchers = [{ type = "path_arg", name = "user_id", value = "740" }]
+content = """
+{"id":740, "name":"Adolph", "surname": "Greenberg"}
+
+"""
+
+# Also we can use some template engine logick to do tricky  stuff :)
+[[deceit.responses]]
+content = """
+{%- if query_args.id %}
+    {%- set id = query_args.id %}
+{%- elif path_args.user_id %}
+    {%- set id = path_args.user_id %}
+{%- else %}
+    {%- set _ = response_code(500) %}
+{%- endif %}
+{%- if id %}
+{"id":"{{ id }}", "name":"Rajesh", "surname": "undefined is not a function"}
+{%- else %}
+{"message":"Unknow ID for some Rajesh or Ivan"}
+{%- endif %}
 
 """

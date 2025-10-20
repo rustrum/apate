@@ -40,6 +40,7 @@ pub struct RequestContext<'a> {
     pub body: &'a Bytes,
     pub path: &'a Path<&'a str>,
     pub args_query: &'a HashMap<String, String>,
+    pub args_path: &'a HashMap<&'a str, &'a str>,
 }
 
 pub fn apate_init_config() -> anyhow::Result<AppConfig> {
@@ -103,11 +104,14 @@ async fn deceit_api_handler(
             continue;
         }
 
+        let args_path = path.iter().collect();
+
         let ctx = RequestContext {
             req,
             body,
             path: &path,
             args_query: &args_query,
+            args_path: &args_path,
         };
 
         log::debug!("{ctx:#?}");

@@ -1,0 +1,62 @@
+name: Apate CI
+
+on:
+  workflow_dispatch: {}
+  push:
+    branches: [main]
+    paths-ignore:
+      - "**/*.md"
+  pull_request:
+    branches: [main, develop]
+    paths-ignore:
+      - "**/*.md"
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.head_ref }}
+  cancel-in-progress: true
+
+env:
+  CARGO_INCREMENTAL: 0
+
+jobs:
+  code-check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          # toolchain: nightly
+          components: rustfmt
+      - uses: Swatinem/rust-cache@v2
+        with:
+          prefix-key: v0-check
+          shared-key: core
+          save-if: false
+      #? - run: cargo +nightly fmt
+      - run: cargo fetch --locked
+      
+      - name: Check code formatting
+        run: cargo fmt --check
+
+      - name: Check that TOML dependencies are sorted
+        run: |
+          cargo install cargo-sort
+          cargo sort -w -g -c
+      
+      - name: Check code style
+        run: cargo clippy --release --workspace --locked --tests --all-features --no-deps -- -D warnings
+
+      - name: Dependencies audit
+        run: cargo audit -D warnings
+
+  unit-tests:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+        with:
+          prefix-key: v0-check
+          shared-key: core
+      - run: cargo fetch --locked
+      - run: cargo test

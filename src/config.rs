@@ -33,8 +33,8 @@ impl AppConfig {
         for path in Self::read_paths_from_env() {
             log::debug!("Parsing TOML config from: {}", path);
 
-            let mut file =
-                std::fs::File::open(&path).map_err(|e| anyhow::anyhow!("Can't parse {path}. {e}"))?;
+            let mut file = std::fs::File::open(&path)
+                .map_err(|e| anyhow::anyhow!("Can't parse {path}. {e}"))?;
 
             let mut buf = Vec::new();
             file.read_to_end(&mut buf)?;
@@ -63,94 +63,11 @@ mod tests {
 
     use super::*;
 
+    const TOML_TEST: &str = include_str!("../examples/apate-specs.toml");
+
+    /// Just checking that examples toml is valid
     #[test]
-    #[ignore]
-    fn serialize_toml() {
-        // let mut deceit = UrisDeceit::new();
-
-        // deceit.insert(
-        //     "/path".to_string(),
-        //     vec![UriDeceit {
-        //         uri: "aaa".to_string(),
-        //         matchers: vec![
-        //             Matcher::Method {
-        //                 eq: "POST".to_string(),
-        //             },
-        //             Matcher::Header {
-        //                 key: "Content-Type".to_string(),
-        //                 value: "application/json".to_string(),
-        //             },
-        //         ],
-        //         response_headers: Default::default(),
-        //         response_code: Some(200),
-        //         responses: vec![DeceitResponse {
-        //             code: 200,
-        //             matchers: vec![],
-        //             post_processors: vec![],
-        //             response_headers: Default::default(),
-        //             json_request_context: false,
-        //             response_template: "Template multiline".to_string(),
-        //         }],
-        //     }],
-        // );
-
-        // let mut specs = ApateSpecs {
-        //     deceit: vec![
-        //         UriDeceit {
-        //             uri: "aaa".to_string(),
-        //             matchers: vec![
-        //                 Matcher::Method {
-        //                     eq: "POST".to_string(),
-        //                 },
-        //                 Matcher::Header {
-        //                     key: "Content-Type".to_string(),
-        //                     value: "application/json".to_string(),
-        //                 },
-        //             ],
-        //             response_headers: Default::default(),
-        //             response_code: Some(200),
-        //             responses: vec![DeceitResponse {
-        //                 code: 200,
-        //                 matchers: vec![],
-        //                 post_processors: vec![],
-        //                 response_headers: Default::default(),
-        //                 json_request_context: false,
-        //                 response_template: "Template multiline".to_string(),
-        //             }],
-        //         },
-        //         UriDeceit {
-        //             uri: "/some/url".to_string(),
-        //             matchers: vec![
-        //                 Matcher::Method {
-        //                     eq: "POST".to_string(),
-        //                 },
-        //                 Matcher::Header {
-        //                     key: "Content-Type".to_string(),
-        //                     value: "application/json".to_string(),
-        //                 },
-        //             ],
-        //             response_headers: Default::default(),
-        //             response_code: Some(200),
-        //             responses: vec![DeceitResponse {
-        //                 code: 200,
-        //                 matchers: vec![],
-        //                 post_processors: vec![],
-        //                 response_headers: Default::default(),
-        //                 json_request_context: false,
-        //                 response_template: "Template multiline".to_string(),
-        //             }],
-        //         },
-        //     ],
-        // };
-
-        // let toml_string = toml::to_string(&specs).unwrap();
-        // println!("{toml_string}");
-    }
-
-    const TOML_TEST: &str = include_str!("config.toml");
-
-    #[test]
-    fn deserialize_toml() {
+    fn deserialize_examples_toml() {
         let specs: ApateSpecs = toml::from_str(TOML_TEST).unwrap();
 
         // The coolest debug approach ever
