@@ -32,6 +32,10 @@ jobs:
           prefix-key: v0-check
           shared-key: core
           save-if: false
+      - uses: taiki-e/install-action@v2
+        with:
+          tool: cargo-audit
+
       #? - run: cargo +nightly fmt
       - run: cargo fetch --locked
       

@@ -1,0 +1,8 @@
+[advisories]
+ignore = [
+    # Could be fixed with next actix-web/tokio-rustls updates
+    "RUSTSEC-2025-0010",
+    # Not a big deal for now
+    "RUSTSEC-2025-0009",
+    "RUSTSEC-2024-0336",
+]
