@@ -1,9 +1,8 @@
 use std::{env, io::Read as _};
 
-use anyhow::bail;
 use serde::{Deserialize, Serialize};
 
-use crate::deceit::Deceit;
+use crate::{DEFAULT_PORT, deceit::Deceit};
 
 #[derive(Clone, Debug, Default, Deserialize, Serialize)]
 pub struct ApateSpecs {
@@ -17,31 +16,53 @@ pub struct AppConfig {
 }
 
 impl AppConfig {
-    pub fn try_new() -> anyhow::Result<Self> {
-        let specs = Self::read_specs()?;
-        Ok(AppConfig {
-            port: env::var("APATHE_PORT")
+    pub fn try_new_defaults() -> anyhow::Result<Self> {
+        Self::try_new(Some(DEFAULT_PORT), Vec::new())
+    }
+
+    pub fn try_new(port: Option<u16>, specs_files: Vec<String>) -> anyhow::Result<Self> {
+        let port = if let Some(p) = port {
+            p
+        } else {
+            env::var("APATHE_PORT")
                 .map(|p| p.parse::<u16>().unwrap())
-                .unwrap_or(8042),
+                .unwrap_or(DEFAULT_PORT)
+        };
+
+        let specs = Self::read_specs(specs_files)?;
+
+        Ok(AppConfig {
+            port,
             specs,
             // rust_log: env::var("RUST_LOG").unwrap_or("info,api_stub_server=debug".into()),
         })
     }
 
-    fn read_specs() -> anyhow::Result<ApateSpecs> {
+    fn read_specs(specs_files: Vec<String>) -> anyhow::Result<ApateSpecs> {
         let mut specs = ApateSpecs::default();
-        for path in Self::read_paths_from_env() {
-            log::debug!("Parsing TOML config from: {}", path);
 
-            let mut file = std::fs::File::open(&path)
-                .map_err(|e| anyhow::anyhow!("Can't parse {path}. {e}"))?;
-
-            let mut buf = Vec::new();
-            file.read_to_end(&mut buf)?;
-
-            let stub: ApateSpecs = toml::from_slice(&buf)?;
+        for path in specs_files {
+            let stub = Self::parse_specs_from(&path)?;
             specs.deceit.extend(stub.deceit);
         }
+
+        for path in Self::read_paths_from_env() {
+            let stub = Self::parse_specs_from(&path)?;
+            specs.deceit.extend(stub.deceit);
+        }
+        Ok(specs)
+    }
+
+    fn parse_specs_from(path: &str) -> anyhow::Result<ApateSpecs> {
+        log::debug!("Parsing TOML config from: {}", path);
+
+        let mut file =
+            std::fs::File::open(path).map_err(|e| anyhow::anyhow!("Can't parse {path}. {e}"))?;
+
+        let mut buf = Vec::new();
+        file.read_to_end(&mut buf)?;
+
+        let specs: ApateSpecs = toml::from_slice(&buf)?;
         Ok(specs)
     }
 

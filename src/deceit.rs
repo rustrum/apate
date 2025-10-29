@@ -84,16 +84,11 @@ impl Deceit {
     }
 }
 
-#[derive(Clone, Debug, Deserialize, Serialize)]
+#[derive(Default, Clone, Debug, Deserialize, Serialize)]
 #[serde(tag = "type", rename_all = "snake_case")]
 pub enum BodyContent {
+    #[default]
     Jinja,
-}
-
-impl Default for BodyContent {
-    fn default() -> Self {
-        BodyContent::Jinja
-    }
 }
 
 /// Context for response renderer and pre/post processors as well.
@@ -113,7 +108,6 @@ pub struct ResponseContext<'a> {
     response_code: Arc<AtomicU16>,
 }
 
-///
 #[derive(Clone, Debug, Deserialize, Serialize)]
 pub struct DeceitResponse {
     /// Code for this particular response
@@ -150,7 +144,7 @@ impl DeceitResponse {
         }
 
         let input_json = if deceit.json_request {
-            let body = String::from_utf8_lossy(&ctx.body);
+            let body = String::from_utf8_lossy(ctx.body);
             Some(serde_json::from_slice::<serde_json::Value>(
                 body.as_bytes(),
             )?)
@@ -161,8 +155,8 @@ impl DeceitResponse {
         let rctx = ResponseContext {
             path: ctx.req.path(),
             headers,
-            query_args: &ctx.args_query,
-            path_args: &ctx.args_path,
+            query_args: ctx.args_query,
+            path_args: ctx.args_path,
             input_json,
             response_code: Arc::new(AtomicU16::new(0)),
         };

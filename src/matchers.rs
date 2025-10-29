@@ -57,11 +57,11 @@ pub fn match_header(key: &str, value: &str, ctx: &RequestContext) -> bool {
     let Some(header_value) = ctx.req.headers().get(key) else {
         return false;
     };
-    header_value.to_str().map_or(false, |v| v == value)
+    header_value.to_str().is_ok_and(|v| v == value)
 }
 
 pub fn match_json(path: &str, value: &str, ctx: &RequestContext) -> bool {
-    let body = String::from_utf8_lossy(&ctx.body);
+    let body = String::from_utf8_lossy(ctx.body);
 
     let json = match serde_json::from_slice::<serde_json::Value>(body.as_bytes()) {
         Ok(json) => json,
@@ -71,13 +71,9 @@ pub fn match_json(path: &str, value: &str, ctx: &RequestContext) -> bool {
         }
     };
 
-    json.query_with_path(path).map_or(false, |result| {
+    json.query_with_path(path).is_ok_and(|result| {
         if result.len() == 1 {
-            result[0]
-                .clone()
-                .val()
-                .as_str()
-                .map_or(false, |val| val == value)
+            result[0].clone().val().as_str() == Some(value)
         } else {
             false
         }

@@ -16,6 +16,7 @@ use async_lock::RwLock;
 
 use crate::config::{ApateSpecs, AppConfig};
 
+pub const DEFAULT_PORT: u16 = 8545;
 const DEFAULT_RUST_LOG: &str = "info,apate=debug";
 
 const ADMIN_API: &str = "/apate";
@@ -43,14 +44,23 @@ pub struct RequestContext<'a> {
     pub args_path: &'a HashMap<&'a str, &'a str>,
 }
 
-pub fn apate_init_config() -> anyhow::Result<AppConfig> {
-    env_logger::Builder::from_env(env_logger::Env::default().default_filter_or(DEFAULT_RUST_LOG))
-        .init();
+pub fn apate_init_config(
+    port: Option<u16>,
+    log: Option<String>,
+    files: Vec<String>,
+) -> anyhow::Result<AppConfig> {
+    let rust_log = log.unwrap_or(DEFAULT_RUST_LOG.to_string());
 
-    AppConfig::try_new()
+    env_logger::Builder::from_env(env_logger::Env::default().default_filter_or(rust_log)).init();
+
+    AppConfig::try_new(port, files)
 }
 
 pub async fn apate_run(config: AppConfig) -> std::io::Result<()> {
+    if config.specs.deceit.is_empty() {
+        log::warn!("Starting server without deceits in specs");
+    }
+
     let data: Data<ApateContext> = Data::new(ApateContext::new(config.specs));
 
     HttpServer::new(move || {
@@ -90,7 +100,7 @@ async fn deceit_api_handler(
 
     let mut args_query: HashMap<String, String> = Default::default();
     let qstring = req.uri().query().unwrap_or_default();
-    if let Ok(qargs) = serde_urlencoded::from_str::<HashMap<String, String>>(&qstring) {
+    if let Ok(qargs) = serde_urlencoded::from_str::<HashMap<String, String>>(qstring) {
         args_query = qargs;
     } else {
         log::error!("Can't decode query string from URL");
@@ -150,7 +160,7 @@ async fn admin_api_handler(
     }
 
     if path == ADMIN_API_PREPEND || path == ADMIN_API_REPLACE {
-        let body_str = String::from_utf8_lossy(&body);
+        let body_str = String::from_utf8_lossy(body);
         // log::trace!("New specs submitted:\n{}", body_str);
 
         match toml::from_str::<ApateSpecs>(&body_str) {
@@ -164,8 +174,8 @@ async fn admin_api_handler(
 
                 if path == ADMIN_API_PREPEND {
                     let mut deceit = new_specs.deceit;
-                    deceit.extend((*specs).deceit.clone());
-                    (*specs).deceit = deceit;
+                    deceit.extend(specs.deceit.clone());
+                    specs.deceit = deceit;
 
                     log::debug!("After extend: {:?}", *specs);
                     return HttpResponse::Ok().body("Specs extended with an input TOML");

@@ -42,3 +42,44 @@ You could deploy Apate service with your application env and call it instead ext
 Apate service does not mean to be super fast. But if deployed alongside your application it could work much better than remote server with some logic behind API.
 
 Thus you will be able to focus mostly on your apps performance ignoring 3rd party API delays.
+
+## CLI server
+
+### Installation
+
+It is kinda tricky now you should build it from source.
+Clone repository, `cd` into it and run:
+
+```sh
+cargo install --features server --path .
+```
+
+### Configuration
+
+You could use next ENV variables:
+
+ - `RUST_LOG` and `RUST_LOG_STYLE` - to configure logging
+ - `APATHE_PORT` - to provide port to run server on (default 8545)
+ - `APATHE_SPECS_FILE...` - any ENV variable which name is started with this suffix will be parsed as a path to spec file
+
+You could start `apate` with CLI arguments to.
+
+```sh
+apate -p 8080 -l warn ./path/to/spec.toml ./path/to/another_spec.toml
+```
+
+- `-p` - port to run server on
+- `-l` - logging level
+- positional arguments - paths to spec files
+
+CLI arguments has higher priority than ENV variables but I do not recommend to mix them.
+
+
+## Unit tests library
+
+TBD
+
+
+## Specs explanation
+
+TBD
