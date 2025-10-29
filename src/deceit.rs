@@ -223,22 +223,22 @@ fn insert_response_headers(
 #[serde(tag = "type", rename_all = "snake_case")]
 pub enum Processor {
     Lua {
-        scope: ProcessorRunScope,
+        scope: ProcessorScope,
         script: String,
     },
     LuaFile {
-        scope: ProcessorRunScope,
+        scope: ProcessorScope,
         path: String,
     },
     /// Reserved for custom user processors
     Custom {
-        scope: ProcessorRunScope,
+        scope: ProcessorScope,
         id: String,
     },
 }
 
 #[derive(Clone, Debug, Deserialize, Serialize)]
-pub enum ProcessorRunScope {
+pub enum ProcessorScope {
     Pre,
     Post,
 }
@@ -269,4 +269,205 @@ fn add_clean_tpl_functions(env: &mut minijinja::Environment) {
 
         hex::encode(bytes)
     });
+}
+
+pub struct DeceitBuilder {
+    uris: Vec<String>,
+
+    headers: Vec<(String, String)>,
+
+    matchers: Vec<Matcher>,
+
+    json_request: bool,
+
+    responses: Vec<DeceitResponse>,
+}
+
+impl DeceitBuilder {
+    pub fn with_uris<T: AsRef<str>>(uris: &[T]) -> Self {
+        let uris = uris.iter().map(|u| u.as_ref().to_string()).collect();
+        Self {
+            uris,
+            headers: Vec::new(),
+            matchers: Vec::new(),
+            json_request: false,
+            responses: Vec::new(),
+        }
+    }
+
+    pub fn build(self) -> Deceit {
+        Deceit {
+            uris: self.uris,
+            headers: self.headers,
+            matchers: self.matchers,
+            json_request: self.json_request,
+            processors: vec![],
+            responses: self.responses,
+        }
+    }
+
+    pub fn add_header(mut self, key: String, value: String) -> Self {
+        self.headers.push((key, value));
+        self
+    }
+
+    pub fn json_request(mut self, json_request: bool) -> Self {
+        self.json_request = json_request;
+        self
+    }
+
+    pub fn with_responses(mut self, responses: Vec<DeceitResponse>) -> Self {
+        self.responses = responses;
+        self
+    }
+
+    pub fn add_response(mut self, response: DeceitResponse) -> Self {
+        self.responses.push(response);
+        self
+    }
+
+    //
+    // Matchers configuration
+    //
+    pub fn add_matcher(mut self, matcher: Matcher) -> Self {
+        self.matchers.push(matcher);
+        self
+    }
+
+    pub fn require_method(mut self, http_method: &str) -> Self {
+        self.matchers.push(Matcher::Method {
+            eq: http_method.to_string(),
+        });
+        self
+    }
+
+    pub fn require_header(mut self, key: &str, value: &str) -> Self {
+        self.matchers.push(Matcher::Header {
+            key: key.to_string(),
+            value: value.to_string(),
+        });
+        self
+    }
+
+    pub fn require_query_arg(mut self, name: &str, value: &str) -> Self {
+        self.matchers.push(Matcher::QueryArg {
+            name: name.to_string(),
+            value: value.to_string(),
+        });
+        self
+    }
+
+    pub fn require_path_arg(mut self, name: &str, value: &str) -> Self {
+        self.matchers.push(Matcher::PathArg {
+            name: name.to_string(),
+            value: value.to_string(),
+        });
+        self
+    }
+
+    pub fn require_json_match(mut self, json_path: &str, eq: &str) -> Self {
+        self.matchers.push(Matcher::Json {
+            path: json_path.to_string(),
+            eq: eq.to_string(),
+        });
+        self
+    }
+
+    /// Replace all matchers with input
+    pub fn with_matchers(mut self, matchers: Vec<Matcher>) -> Self {
+        self.matchers = matchers;
+        self
+    }
+}
+#[derive(Default)]
+pub struct DeceitResponseBuilder {
+    code: Option<u16>,
+
+    matchers: Vec<Matcher>,
+
+    headers: Vec<(String, String)>,
+
+    content: String,
+}
+
+impl DeceitResponseBuilder {
+    pub fn build(self) -> DeceitResponse {
+        DeceitResponse {
+            code: self.code,
+            matchers: self.matchers,
+            headers: self.headers,
+            processors: vec![],
+            content_type: BodyContent::Jinja,
+            content: self.content,
+        }
+    }
+
+    pub fn code(mut self, code: u16) -> Self {
+        self.code = Some(code);
+        self
+    }
+
+    /// Add response header for this response
+    pub fn add_header(mut self, key: &str, value: &str) -> Self {
+        self.headers.push((key.to_string(), value.to_string()));
+        self
+    }
+
+    pub fn with_content(mut self, content: &str) -> Self {
+        self.content = content.to_string();
+        self
+    }
+
+    //
+    // Matchers configuration
+    //
+    pub fn add_matcher(mut self, matcher: Matcher) -> Self {
+        self.matchers.push(matcher);
+        self
+    }
+
+    pub fn require_method(mut self, http_method: &str) -> Self {
+        self.matchers.push(Matcher::Method {
+            eq: http_method.to_string(),
+        });
+        self
+    }
+
+    pub fn require_header(mut self, key: &str, value: &str) -> Self {
+        self.matchers.push(Matcher::Header {
+            key: key.to_string(),
+            value: value.to_string(),
+        });
+        self
+    }
+
+    pub fn require_query_arg(mut self, name: &str, value: &str) -> Self {
+        self.matchers.push(Matcher::QueryArg {
+            name: name.to_string(),
+            value: value.to_string(),
+        });
+        self
+    }
+
+    pub fn require_path_arg(mut self, name: &str, value: &str) -> Self {
+        self.matchers.push(Matcher::PathArg {
+            name: name.to_string(),
+            value: value.to_string(),
+        });
+        self
+    }
+
+    pub fn require_json_match(mut self, json_path: &str, eq: &str) -> Self {
+        self.matchers.push(Matcher::Json {
+            path: json_path.to_string(),
+            eq: eq.to_string(),
+        });
+        self
+    }
+
+    /// Replace all matchers with input
+    pub fn with_matchers(mut self, matchers: Vec<Matcher>) -> Self {
+        self.matchers = matchers;
+        self
+    }
 }

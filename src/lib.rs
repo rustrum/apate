@@ -1,6 +1,7 @@
 mod config;
 mod deceit;
 mod matchers;
+pub mod test;
 
 use std::collections::HashMap;
 use std::net::Ipv4Addr;
