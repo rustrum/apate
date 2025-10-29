@@ -82,4 +82,8 @@ TBD
 
 ## Specs explanation
 
-TBD
+There is a [specs example file](./examples/apate-specs.toml) which contains different configuration options with comments.
+I hope that you will be smart enough to understand it by yourself.
+
+Response content utilize [minijinja](https://docs.rs/minijinja/latest/minijinja/) template engine.
+Template syntax documentation can be found [here](https://docs.rs/minijinja/latest/minijinja/syntax).
