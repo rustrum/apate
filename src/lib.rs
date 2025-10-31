@@ -14,7 +14,6 @@ use actix_web::{
     HttpRequest, HttpResponse, HttpServer,
     web::{self, Bytes, Data},
 };
-use actix_web::{rt, rt::task::JoinHandle};
 use async_lock::RwLock;
 
 use crate::config::{ApateSpecs, AppConfig};
@@ -47,16 +46,6 @@ pub struct RequestContext<'a> {
     pub args_path: &'a HashMap<&'a str, &'a str>,
 }
 
-pub struct ApateTestServer {
-    handle: JoinHandle<Result<(), std::io::Error>>,
-}
-
-impl Drop for ApateTestServer {
-    fn drop(&mut self) {
-        self.handle.abort();
-    }
-}
-
 pub fn apate_server_init_config(
     port: Option<u16>,
     log: Option<String>,
@@ -67,21 +56,6 @@ pub fn apate_server_init_config(
     env_logger::Builder::from_env(env_logger::Env::default().default_filter_or(rust_log)).init();
 
     AppConfig::try_new(port, files)
-}
-
-pub fn apate_run_test(config: AppConfig, log: &str) -> ApateTestServer {
-    if !log.is_empty() {
-        env_logger::Builder::from_env(env_logger::Env::default().default_filter_or(log)).init();
-    }
-    if config.specs.deceit.is_empty() {
-        log::warn!("Starting server without deceits in specs");
-    }
-
-    let server = actix_init_server(config).expect("Test server must be initialized");
-
-    let handle = rt::spawn(server);
-
-    ApateTestServer { handle }
 }
 
 pub async fn apate_run(config: AppConfig) -> std::io::Result<()> {

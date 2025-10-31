@@ -1,12 +1,11 @@
 use std::collections::HashMap;
 
 use apate::{
-    ApateTestServer, DEFAULT_RUST_LOG, apate_run_test,
-    test::{DeceitBuilder, DeceitResponseBuilder},
+    DEFAULT_RUST_LOG,
+    test::{ApateTestServer, DeceitBuilder, DeceitResponseBuilder, apate_run_test},
 };
 
-// #[tokio::main(flavor = "current_thread")]
-#[actix_web::main]
+#[tokio::main]
 async fn main() {
     println!("Running example tests...");
 
@@ -30,6 +29,8 @@ fn apate_init() -> ApateTestServer {
 async fn apate_unit_test_example() {
     let apate = apate_init();
 
+    println!("STARTING TEST");
+
     let client = reqwest::Client::new();
 
     let resp = client
@@ -37,6 +38,8 @@ async fn apate_unit_test_example() {
         .send()
         .await
         .expect("Valid response");
+
+    println!("CHECKING response");
 
     assert_eq!(resp.status().as_u16(), 200);
 
@@ -47,5 +50,6 @@ async fn apate_unit_test_example() {
 
     assert_eq!(body["message"], "Success");
 
+    println!("EXIT TEST");
     drop(apate);
 }
