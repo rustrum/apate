@@ -8,17 +8,19 @@ use std::net::Ipv4Addr;
 
 use actix_router::{Path, ResourceDef};
 use actix_web::App;
+use actix_web::dev::Server;
 use actix_web::middleware::Logger;
 use actix_web::{
     HttpRequest, HttpResponse, HttpServer,
     web::{self, Bytes, Data},
 };
+use actix_web::{rt, rt::task::JoinHandle};
 use async_lock::RwLock;
 
 use crate::config::{ApateSpecs, AppConfig};
 
 pub const DEFAULT_PORT: u16 = 8545;
-const DEFAULT_RUST_LOG: &str = "info,apate=debug";
+pub const DEFAULT_RUST_LOG: &str = "info,apate=debug";
 
 const ADMIN_API: &str = "/apate";
 const ADMIN_API_PREPEND: &str = "/apate/prepend";
@@ -45,7 +47,17 @@ pub struct RequestContext<'a> {
     pub args_path: &'a HashMap<&'a str, &'a str>,
 }
 
-pub fn apate_init_config(
+pub struct ApateTestServer {
+    handle: JoinHandle<Result<(), std::io::Error>>,
+}
+
+impl Drop for ApateTestServer {
+    fn drop(&mut self) {
+        self.handle.abort();
+    }
+}
+
+pub fn apate_server_init_config(
     port: Option<u16>,
     log: Option<String>,
     files: Vec<String>,
@@ -57,14 +69,33 @@ pub fn apate_init_config(
     AppConfig::try_new(port, files)
 }
 
+pub fn apate_run_test(config: AppConfig, log: &str) -> ApateTestServer {
+    if !log.is_empty() {
+        env_logger::Builder::from_env(env_logger::Env::default().default_filter_or(log)).init();
+    }
+    if config.specs.deceit.is_empty() {
+        log::warn!("Starting server without deceits in specs");
+    }
+
+    let server = actix_init_server(config).expect("Test server must be initialized");
+
+    let handle = rt::spawn(server);
+
+    ApateTestServer { handle }
+}
+
 pub async fn apate_run(config: AppConfig) -> std::io::Result<()> {
+    actix_init_server(config)?.await
+}
+
+fn actix_init_server(config: AppConfig) -> std::io::Result<Server> {
     if config.specs.deceit.is_empty() {
         log::warn!("Starting server without deceits in specs");
     }
 
     let data: Data<ApateContext> = Data::new(ApateContext::new(config.specs));
 
-    HttpServer::new(move || {
+    let server = HttpServer::new(move || {
         App::new()
             .app_data(data.clone()) // Share config with handlers
             .wrap(Logger::default()) // Add logging middleware
@@ -72,8 +103,9 @@ pub async fn apate_run(config: AppConfig) -> std::io::Result<()> {
     })
     .bind((Ipv4Addr::UNSPECIFIED, config.port))?
     .keep_alive(actix_web::http::KeepAlive::Disabled)
-    .run()
-    .await
+    .run();
+
+    Ok(server)
 }
 
 pub async fn process_request(
@@ -108,6 +140,7 @@ async fn deceit_api_handler(
     }
 
     for d in deceit {
+        log::debug!("Processing deceit for URIs: {:?}", d.uris);
         let mut path = Path::new(req.path());
 
         let resource = ResourceDef::new(d.uris.clone());
@@ -131,6 +164,7 @@ async fn deceit_api_handler(
             continue;
         };
 
+        log::debug!("Deceit match successful (^_^). Processing response");
         return match d.process_response(idx, &ctx) {
             Ok(good) => good,
             Err(e) => HttpResponse::InternalServerError().body(format!("It happened! {e}\n")),

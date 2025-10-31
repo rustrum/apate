@@ -306,6 +306,15 @@ impl DeceitBuilder {
         }
     }
 
+    pub fn to_app_config(self, port: u16) -> crate::AppConfig {
+        crate::AppConfig {
+            port,
+            specs: crate::ApateSpecs {
+                deceit: vec![self.build()],
+            },
+        }
+    }
+
     pub fn add_header(mut self, key: String, value: String) -> Self {
         self.headers.push((key, value));
         self

@@ -1,12 +1,12 @@
 use std::io;
 
-use apate::{apate_init_config, apate_run};
+use apate::{apate_run, apate_server_init_config};
 
 #[actix_web::main]
 async fn main() -> io::Result<()> {
     let (port, log, spec_files) = parse_args()?;
 
-    let config = apate_init_config(port, log, spec_files).map_err(io::Error::other)?;
+    let config = apate_server_init_config(port, log, spec_files).map_err(io::Error::other)?;
 
     log::debug!("Configuration initialized: {:?}", config);
 

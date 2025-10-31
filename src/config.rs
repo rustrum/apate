@@ -79,6 +79,41 @@ impl AppConfig {
     }
 }
 
+pub struct AppConfigBuilder {
+    port: u16,
+    deceit: Vec<Deceit>,
+}
+
+impl Default for AppConfigBuilder {
+    fn default() -> Self {
+        Self {
+            port: DEFAULT_PORT,
+            deceit: Default::default(),
+        }
+    }
+}
+
+impl AppConfigBuilder {
+    pub fn with_port(mut self, port: u16) -> Self {
+        self.port = port;
+        self
+    }
+
+    pub fn add_deceit(mut self, deceit: Deceit) -> Self {
+        self.deceit.push(deceit);
+        self
+    }
+
+    pub fn build(self) -> AppConfig {
+        AppConfig {
+            port: self.port,
+            specs: ApateSpecs {
+                deceit: self.deceit,
+            },
+        }
+    }
+}
+
 #[cfg(test)]
 mod tests {
 

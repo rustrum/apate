@@ -77,7 +77,9 @@ CLI arguments has higher priority than ENV variables but I do not recommend to m
 
 ## Unit tests library
 
-TBD
+TBD Later
+
+See examples inside [examples](./examples) folder.
 
 
 ## Specs explanation
