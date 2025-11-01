@@ -60,7 +60,7 @@ You could use next ENV variables:
 
  - `RUST_LOG` and `RUST_LOG_STYLE` - to configure logging
  - `APATHE_PORT` - to provide port to run server on (default 8545)
- - `APATHE_SPECS_FILE...` - any ENV variable which name is started with this suffix will be parsed as a path to spec file
+ - `APATHE_SPECS_FILE...` - any ENV variable which name is started with such prefix will be parsed as a path to spec file
 
 You could start `apate` with CLI arguments to.
 
