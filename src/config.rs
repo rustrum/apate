@@ -15,6 +15,15 @@ pub struct AppConfig {
     pub specs: ApateSpecs,
 }
 
+impl Default for AppConfig {
+    fn default() -> Self {
+        Self {
+            port: DEFAULT_PORT,
+            specs: Default::default(),
+        }
+    }
+}
+
 impl AppConfig {
     pub fn try_new_defaults() -> anyhow::Result<Self> {
         Self::try_new(Some(DEFAULT_PORT), Vec::new())

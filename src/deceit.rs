@@ -14,12 +14,13 @@ use serde::{Deserialize, Serialize};
 use crate::{
     RequestContext,
     matchers::{Matcher, is_matcher_approves},
+    test::AppConfig,
 };
 
 const DEFAULT_RESPONSE_CODE: u16 = 200;
 
 /// Unit responsible for mocking actual URIs
-#[derive(Clone, Debug, Deserialize, Serialize)]
+#[derive(Clone, Debug, Default, Deserialize, Serialize)]
 pub struct Deceit {
     pub uris: Vec<String>,
 
@@ -108,7 +109,7 @@ pub struct ResponseContext<'a> {
     response_code: Arc<AtomicU16>,
 }
 
-#[derive(Clone, Debug, Deserialize, Serialize)]
+#[derive(Clone, Debug, Default, Deserialize, Serialize)]
 pub struct DeceitResponse {
     /// Code for this particular response
     #[serde(default)]
@@ -118,7 +119,7 @@ pub struct DeceitResponse {
     pub matchers: Vec<Matcher>,
 
     #[serde(default)]
-    headers: Vec<(String, String)>,
+    pub headers: Vec<(String, String)>,
 
     #[serde(default)]
     pub processors: Vec<Processor>,
@@ -306,8 +307,19 @@ impl DeceitBuilder {
         }
     }
 
-    pub fn to_app_config(self, port: u16) -> crate::AppConfig {
-        crate::AppConfig {
+    /// Wraps single [`Deceit`] into a [`AppConfig`] with default parameters.
+    pub fn to_app_config(self) -> AppConfig {
+        AppConfig {
+            specs: crate::ApateSpecs {
+                deceit: vec![self.build()],
+            },
+            ..Default::default()
+        }
+    }
+
+    /// Wraps single [`Deceit`] into a [`AppConfig`] with specified port.
+    pub fn to_app_config_with_port(self, port: u16) -> AppConfig {
+        AppConfig {
             port,
             specs: crate::ApateSpecs {
                 deceit: vec![self.build()],
@@ -315,8 +327,8 @@ impl DeceitBuilder {
         }
     }
 
-    pub fn add_header(mut self, key: String, value: String) -> Self {
-        self.headers.push((key, value));
+    pub fn add_header(mut self, key: &str, value: &str) -> Self {
+        self.headers.push((key.to_string(), value.to_string()));
         self
     }
 

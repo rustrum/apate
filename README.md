@@ -75,11 +75,39 @@ apate -p 8080 -l warn ./path/to/spec.toml ./path/to/another_spec.toml
 CLI arguments has higher priority than ENV variables but I do not recommend to mix them.
 
 
-## Unit tests library
+## Use with your unit tests
 
-TBD Later
+You can use apate as a library for you unit tests.
+Here are some examples how to use it [see test examples](./tests/test-api.rs).
 
-See examples inside [examples](./examples) folder.
+Before test start you should create instance of apate test server and launch it.
+After that you will be able to call your API endpoints at `http://localhost:8545` or any other port you specified.
+
+
+This is a how it will looks like in the code.
+```rust
+
+/// Yes the test does not require to be async.
+fn my_api_test() {
+    let config = DeceitBuilder::with_uris(&["/user/check"])
+        .require_method("POST")
+        .add_header("Content-Type", "application/json")
+        .add_response(
+            DeceitResponseBuilder::default()
+                .code(200)
+                .with_content(r#"{"message":"Success"}"#)
+                .build(),
+        )
+        .to_app_config();
+
+    let _server = ApateTestServer::start(config, "", 0);
+
+    // That's all you need to do.
+    // Now you can call http://localhost:8545/user/check 
+    // You will get JSON response{"message":"Success"}
+    // And response will have header "Content-Type: application/json"
+}
+```
 
 
 ## Specs explanation
