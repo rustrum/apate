@@ -38,7 +38,7 @@ fn non_async_test() {
         ..Default::default()
     };
 
-    let server = ApateTestServer::start(config, INIT_DELAY_MS);
+    let _apate = ApateTestServer::start(config, INIT_DELAY_MS);
 
     let client = reqwest::blocking::Client::new();
     let response = client
@@ -58,7 +58,6 @@ fn non_async_test() {
         response.json().expect("Failed to parse JSON response");
 
     assert_eq!(response_json["message"], "Success");
-    drop(server);
 }
 
 #[tokio::test]
@@ -76,7 +75,7 @@ async fn async_test() {
         // If you have only single deceit there is a shortcut to build application config.
         .to_app_config();
 
-    let server = ApateTestServer::start(config, INIT_DELAY_MS);
+    let _apate = ApateTestServer::start(config, INIT_DELAY_MS);
 
     let client = reqwest::Client::new();
     let response = client
@@ -108,8 +107,6 @@ async fn async_test() {
         .expect("Request failed");
 
     assert!(!response.status().is_success());
-
-    drop(server);
 }
 
 #[tokio::test]
@@ -143,7 +140,7 @@ async fn complex_configuration_test() {
         )
         .build();
 
-    let server = ApateTestServer::start(config, INIT_DELAY_MS);
+    let _apate = ApateTestServer::start(config, INIT_DELAY_MS);
 
     let client = reqwest::Client::new();
 
@@ -189,6 +186,4 @@ async fn complex_configuration_test() {
     assert_eq!(response_json["name"], "Ignat");
 
     assert_eq!(response_json["id"], "1133");
-
-    drop(server);
 }
