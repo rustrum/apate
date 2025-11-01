@@ -1,7 +1,17 @@
 # Test specification which will be used with `cargo run`
+#
+# Configuration contains a list of so called "deciet" units.
+# Each deceit provide responses for some set of URIs.
+# It is not prohibited to have several deceit units 
+# that mock same URI but I do not recommend it.
+# 
+# Deceit will try to match URI and apply matchers against request.
+# On success response processing will be started.
+# If deceit level matchers will fail then next deceit will be tried.
+# Note that if response level matchig would fail next deceit will not be tried
+# and error will be returned instead.
 
-# Each URI moking unit called "deceit"
-# This deceit mock listing users
+# Mocking users list functionality
 [[deceit]]
 uris = ["/user/list"]
 headers = [["Content-Type", "application/json"]]
@@ -47,7 +57,7 @@ content = """
 """
 
 
-# Another deceit for adding user
+# Mocking user add functionality
 [[deceit]]
 uris = ["/user/add"]
 json_request = true
@@ -80,7 +90,7 @@ content = """
 """
 
 
-# Get user deceit
+# Mocking user get functionality
 [[deceit]]
 uris = ["/user/{user_id}", "/user"]
 headers = [["Content-Type", "application/json"]]
