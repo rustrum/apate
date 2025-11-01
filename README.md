@@ -88,6 +88,7 @@ This is a how it will looks like in the code.
 ```rust
 
 /// Yes the test does not require to be async.
+#[test]
 fn my_api_test() {
     let config = DeceitBuilder::with_uris(&["/user/check"])
         .require_method("POST")
