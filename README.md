@@ -100,7 +100,7 @@ fn my_api_test() {
         )
         .to_app_config();
 
-    let _server = ApateTestServer::start(config, "", 0);
+    let _server = ApateTestServer::start(config, 0);
 
     // That's all you need to do.
     // Now you can call http://localhost:8545/user/check 
@@ -108,7 +108,6 @@ fn my_api_test() {
     // And response will have header "Content-Type: application/json"
 }
 ```
-
 
 ## Specs explanation
 

@@ -1,3 +1,4 @@
+use serial_test::serial;
 use std::collections::HashMap;
 
 use apate::test::{
@@ -5,13 +6,19 @@ use apate::test::{
     DeceitResponse, DeceitResponseBuilder, Matcher,
 };
 
+const INIT_DELAY_MS: usize = 1;
+
 fn api_url(uri: &str) -> String {
     format!("http://localhost:{DEFAULT_PORT}{uri}")
 }
 
 /// `ApateTestServer` does not require async context so it can be used in regular tests.
 #[test]
+#[serial]
 fn non_async_test() {
+    // You could setup logging level for apate server if you need deep debugging.
+    //apate::test::init_env_logger("debug");
+
     // An example how to build a config if fancy builders does not fit your needs.
     let config = AppConfig {
         specs: ApateSpecs {
@@ -31,7 +38,7 @@ fn non_async_test() {
         ..Default::default()
     };
 
-    let _server = ApateTestServer::start(config, "", 0);
+    let server = ApateTestServer::start(config, INIT_DELAY_MS);
 
     let client = reqwest::blocking::Client::new();
     let response = client
@@ -51,9 +58,11 @@ fn non_async_test() {
         response.json().expect("Failed to parse JSON response");
 
     assert_eq!(response_json["message"], "Success");
+    drop(server);
 }
 
 #[tokio::test]
+#[serial]
 async fn async_test() {
     let config = DeceitBuilder::with_uris(&["/user/check"])
         .require_method("POST")
@@ -67,7 +76,7 @@ async fn async_test() {
         // If you have only single deceit there is a shortcut to build application config.
         .to_app_config();
 
-    let _server = ApateTestServer::start(config, "", 0);
+    let server = ApateTestServer::start(config, INIT_DELAY_MS);
 
     let client = reqwest::Client::new();
     let response = client
@@ -99,9 +108,12 @@ async fn async_test() {
         .expect("Request failed");
 
     assert!(!response.status().is_success());
+
+    drop(server);
 }
 
 #[tokio::test]
+#[serial]
 async fn complex_configuration_test() {
     // More complex configuration with several deceit
     let config = AppConfigBuilder::default()
@@ -131,7 +143,7 @@ async fn complex_configuration_test() {
         )
         .build();
 
-    let _server = ApateTestServer::start(config, "", 0);
+    let server = ApateTestServer::start(config, INIT_DELAY_MS);
 
     let client = reqwest::Client::new();
 
@@ -175,5 +187,8 @@ async fn complex_configuration_test() {
         .expect("Failed to parse JSON response");
 
     assert_eq!(response_json["name"], "Ignat");
+
     assert_eq!(response_json["id"], "1133");
+
+    drop(server);
 }
