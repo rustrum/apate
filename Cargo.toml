@@ -1,11 +1,12 @@
 [package]
 name = "apate"
-version = "0.0.3"
+version = "0.0.4"
 edition = "2024"
 homepage = "https://github.com/rustrum/apate"
 repository = "https://github.com/rustrum/apate.git"
-description = "Any API mocking service for different types of tests"
 license-file = "LICENSE"
+description = "API mocking server & rust unit tests library to mimic external 3rd party API endpoints"
+keywords = ["api", "server", "mocking", "integration", "testing"]
 
 [[bin]]
 name = "apate"
