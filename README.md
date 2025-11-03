@@ -8,11 +8,10 @@ API mocking service that main purpose is to help with integration and end-to-end
 Project named after Apate - the goddess and personification of deceit.
 
 
-## Project in MVP stage !
+## What is project state is it stable ?
 
-Right now project approaching MVP stage.
-Anything could change without prior notice.
-But I'm planning to release 0.1 stable MVP version soon.
+It will be stable after 0.1 MVP release that should be very soon.
+Right now almost all API is setted up and only small changes and new features will be provided.
 
 
 ## Running Apate server
