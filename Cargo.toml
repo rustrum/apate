@@ -1,6 +1,6 @@
 [package]
 name = "apate"
-version = "0.0.4"
+version = "0.0.5"
 edition = "2024"
 homepage = "https://github.com/rustrum/apate"
 repository = "https://github.com/rustrum/apate.git"
@@ -18,8 +18,10 @@ server = ["getopt3"]
 [dependencies]
 actix-router = "0.5"
 actix-web = { version = "4.11", features = ["rustls"] }
-anyhow = "1"
-async-lock = "3.4"
+async-lock = { version = "3.4", features = ["std"] }
+base64 = "0.22"
+cityhasher = "0.1"
+color-eyre = "0.6"
 env_logger = "0.11"
 futures = { version = "0.3", features = ["thread-pool"] }
 hex = "0.4"
@@ -32,9 +34,10 @@ serde_json = "1.0"
 serde_urlencoded = "0.7"
 tokio = { version = "1", features = ["full"] }
 toml = "0.9"
+uuid = { version = "1.18", features = ["v4"] }
 
 getopt3 = { version = "2.5.0", optional = true }
 
 [dev-dependencies]
 reqwest = { version = "0.12", features = ["json", "blocking"] }
-serial_test = "3.2"
+serial_test = "3"

@@ -1,2 +1,3 @@
 [env]
 APATHE_SPECS_FILE_1 = "examples/apate-specs.toml"
+APATHE_SPECS_FILE_2 = "examples/apate-template-syntax.toml"

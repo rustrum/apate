@@ -29,7 +29,7 @@ fn non_async_test() {
                 }],
                 headers: vec![("Content-Type".to_string(), "application/json".to_string())],
                 responses: vec![DeceitResponse {
-                    content: r#"{"message":"Success"}"#.to_string(),
+                    output: r#"{"message":"Success"}"#.to_string(),
                     ..Default::default()
                 }],
                 ..Default::default()
@@ -69,7 +69,7 @@ async fn async_test() {
         .add_response(
             DeceitResponseBuilder::default()
                 .code(200)
-                .with_content(r#"{"message":"Success"}"#)
+                .with_output(r#"{"message":"Success"}"#)
                 .build(),
         )
         // If you have only single deceit there is a shortcut to build application config.
@@ -121,7 +121,7 @@ async fn complex_configuration_test() {
                 .add_response(
                     DeceitResponseBuilder::default()
                         .code(200)
-                        .with_content(r#"{"message":"Success"}"#)
+                        .with_output(r#"{"message":"Success"}"#)
                         .build(),
                 )
                 .build(),
@@ -133,7 +133,7 @@ async fn complex_configuration_test() {
                     DeceitResponseBuilder::default()
                         .code(200)
                         .add_header("Content-Type", "application/json")
-                        .with_content(r#"{"id": "{{ path_args.id }}", "name":"Ignat"}"#)
+                        .with_output(r#"{"id": "{{ path_args.id }}", "name":"Ignat"}"#)
                         .build(),
                 )
                 .build(),

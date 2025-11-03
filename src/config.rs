@@ -25,11 +25,11 @@ impl Default for AppConfig {
 }
 
 impl AppConfig {
-    pub fn try_new_defaults() -> anyhow::Result<Self> {
+    pub fn try_new_defaults() -> color_eyre::Result<Self> {
         Self::try_new(Some(DEFAULT_PORT), Vec::new())
     }
 
-    pub fn try_new(port: Option<u16>, specs_files: Vec<String>) -> anyhow::Result<Self> {
+    pub fn try_new(port: Option<u16>, specs_files: Vec<String>) -> color_eyre::Result<Self> {
         let port = if let Some(p) = port {
             p
         } else {
@@ -47,7 +47,7 @@ impl AppConfig {
         })
     }
 
-    fn read_specs(specs_files: Vec<String>) -> anyhow::Result<ApateSpecs> {
+    fn read_specs(specs_files: Vec<String>) -> color_eyre::Result<ApateSpecs> {
         let mut specs = ApateSpecs::default();
 
         for path in specs_files {
@@ -62,11 +62,11 @@ impl AppConfig {
         Ok(specs)
     }
 
-    fn parse_specs_from(path: &str) -> anyhow::Result<ApateSpecs> {
+    fn parse_specs_from(path: &str) -> color_eyre::Result<ApateSpecs> {
         log::debug!("Parsing TOML config from: {}", path);
 
-        let mut file =
-            std::fs::File::open(path).map_err(|e| anyhow::anyhow!("Can't parse {path}. {e}"))?;
+        let mut file = std::fs::File::open(path)
+            .map_err(|e| color_eyre::eyre::eyre!("Can't parse {path}. {e}"))?;
 
         let mut buf = Vec::new();
         file.read_to_end(&mut buf)?;

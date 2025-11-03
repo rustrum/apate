@@ -19,7 +19,7 @@ matchers = [{ type = "method", eq = "GET" }]
 
 [[deceit.responses]]
 matchers = [{ type = "query_arg", name = "name", value = "Ivan" }]
-content = """
+output = """
 [
     {"id":42, "name":"Ivan", "surname": "Ivanov"},
 ]
@@ -28,7 +28,7 @@ content = """
 
 [[deceit.responses]]
 matchers = [{ type = "query_arg", name = "name", value = "Adolph" }]
-content = """
+output = """
 [
     {"id":740, "name":"Adolph", "surname": "Greenberg"},
     {"id":741, "name":"Adolph", "surname": "Shtern"},
@@ -40,13 +40,13 @@ content = """
 [[deceit.responses]]
 code = 503
 matchers = [{ type = "query_arg", name = "name", value = "Rajesh" }]
-content = """
+output = """
 {"message": "Impossible to list them all"}
 
 """
 
 [[deceit.responses]]
-content = """
+output = """
 [
     {"id":42, "name":"Ivan", "surname": "Ivanov"},
     {"id":740, "name":"Adolph", "surname": "Greenberg"},
@@ -67,7 +67,7 @@ matchers = [{ type = "method", eq = "POST" }]
 [[deceit.responses]]
 code = 416
 matchers = [{ type = "json", path = "$.name", eq = "Rajesh" }]
-content = """
+output = """
 {"message": "Rajesh? Too mach of them in this world already! Be creative, find another name!"}
 
 """
@@ -78,13 +78,13 @@ matchers = [
     { type = "json", path = "$.name", eq = "Adolph" },
     { type = "json", path = "$.surname", eq = "Hitler" },
 ]
-content = """
+output = """
 {"message": "Nun wird Terror mit Terror beantwortet"}
 
 """
 
 [[deceit.responses]]
-content = """
+output = """
 { "id": 42, "name": "{{ input_json.name }}", "surname": "{{ input_json.surname }}" }
 
 """
@@ -99,7 +99,7 @@ matchers = [{ type = "method", eq = "GET" }]
 # This would match only for /user?id=42
 [[deceit.responses]]
 matchers = [{ type = "query_arg", name = "id", value = "42" }]
-content = """
+output = """
 {"id":42, "name":"Ivan", "surname": "Ivanov"},
 
 """
@@ -107,20 +107,20 @@ content = """
 # This one is /user/740
 [[deceit.responses]]
 matchers = [{ type = "path_arg", name = "user_id", value = "740" }]
-content = """
+output = """
 {"id":740, "name":"Adolph", "surname": "Greenberg"}
 
 """
 
 # Also we can use some template engine logick to do tricky  stuff :)
 [[deceit.responses]]
-content = """
+output = """
 {%- if query_args.id %}
     {%- set id = query_args.id %}
 {%- elif path_args.user_id %}
     {%- set id = path_args.user_id %}
 {%- else %}
-    {%- set _ = response_code(500) %}
+    {%- set _ = force_response_code(500) %}
 {%- endif %}
 {%- if id %}
 {"id":"{{ id }}", "name":"Rajesh", "surname": "undefined is not a function"}

@@ -1,3 +1,11 @@
+//! Matchers are just specific checks to run agains input HTTP request.
+//! In order to proceed forward all matches must return true.
+//!
+//! Matchers behaive different on deceit ane response levels:
+//!
+//!  - if matchers failed on deceit level, than next deceit will be handled (if any)
+//!  - if matchers failed on response level an error will be returned
+
 use jsonpath_rust::JsonPath as _;
 use serde::{Deserialize, Serialize};
 

@@ -15,7 +15,7 @@ Anything could change without prior notice.
 But I'm planning to release 0.1 stable MVP version soon.
 
 
-## Run Apate as a server
+## Running Apate server
 
 ### Installation
 
@@ -45,7 +45,7 @@ apate -p 8080 -l warn ./path/to/spec.toml ./path/to/another_spec.toml
 - positional arguments - paths to spec files
 
 
-## Use Apate with your unit tests
+## Using Apate in tests
 
 Some self explanatory tests examples [could be found here](./tests/test-api.rs).
 
@@ -64,7 +64,7 @@ fn my_api_test() {
         .add_response(
             DeceitResponseBuilder::default()
                 .code(200)
-                .with_content(r#"{"message":"Success"}"#)
+                .with_output(r#"{"message":"Success"}"#)
                 .build(),
         )
         .to_app_config();
@@ -80,38 +80,45 @@ fn my_api_test() {
 ```
 
 
-## Specs explanation
+## Apate specification
 
-There is a [specs example file](./examples/apate-specs.toml) which contains different configuration options with comments.
+Respository contains [specification example file](./examples/apate-specs.toml) with verbose comments.
 I hope that you will be smart enough to understand it by yourself.
+
+### Template syntax
 
 Response content utilize [minijinja](https://docs.rs/minijinja/latest/minijinja/) template engine.
 Template syntax documentation can be found [here](https://docs.rs/minijinja/latest/minijinja/syntax).
 
+Look for template usage examples in [this specs file](./examples/apate-template-specs.toml).
 
-## Butt why do I really need it?
+### Non string responses
 
-### Local development
+It is possible to respond with binary content instead of string. TBD later.
 
-It could be useful to do not call external APIs during development but interact with something that behaves like it.
 
-### Unit tests
+## Butt why do I really need Apate?
 
-You want to test your application logic without mocking client HTTP calls.
-So the flow will look like this:
+### For local development
+
+Because it could be more convinient to interact with fast and predictable APIs on localhost that calling something far away.
+
+### For unit tests
+
+There is no need to mock your application logic that performing HTTP calls.
+Just provide local API endpoints with predefined responses for each test.
+So the flow will be like this:
 ```
 [call your lib logic] -> [real API call] -> [Apate] -> [handling response]
 ```
 
 ### Integration / E2E tests
 
-You need to run integration tests where 3rd party API calls required to complete the logic flow. But 3rd party API does not has test environment, or it is not stable, has rate limits etc.
-
-You could deploy Apate service with your application env and call it instead external provider.
-
+You could deploy Apate server within your dev/stage/whatever environment.
+Now you will have predictable responses without calling 3rd party API provider.
+It is very useful if 3rd party API provider does not have any test environment or it is not stable, has rate limits etc.
 
 ### Load tests
 
-Apate service does not mean to be super fast. But if deployed alongside your application it could work much better than remote server with some logic behind API.
-
+Apate server does not mean to be super fast but if deployed alongside your application it could work much better than remote server with some weird logic behind it. 
 Thus you will be able to focus mostly on your apps performance ignoring 3rd party API delays.

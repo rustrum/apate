@@ -1,10 +1,13 @@
 mod config;
 mod deceit;
 mod matchers;
+mod output;
 pub mod test;
 
 use std::collections::HashMap;
 use std::net::Ipv4Addr;
+use std::sync::Arc;
+use std::sync::atomic::AtomicU64;
 
 use actix_router::{Path, ResourceDef};
 use actix_web::App;
@@ -25,15 +28,46 @@ const ADMIN_API: &str = "/apate";
 const ADMIN_API_PREPEND: &str = "/apate/prepend";
 const ADMIN_API_REPLACE: &str = "/apate/replace";
 
-pub struct ApateContext {
+/// Shared state for apate web server.
+pub struct ApateState {
     pub specs: RwLock<ApateSpecs>,
+    pub counters: ApateCounters,
 }
 
-impl ApateContext {
+impl ApateState {
     pub fn new(specs: ApateSpecs) -> Self {
         Self {
             specs: RwLock::new(specs),
+            counters: Default::default(),
         }
+    }
+}
+
+#[derive(Clone, Default)]
+pub struct ApateCounters {
+    counters: Arc<std::sync::RwLock<HashMap<String, Arc<AtomicU64>>>>,
+}
+
+impl ApateCounters {
+    pub fn get_or_default(&self, key: &str) -> color_eyre::Result<Arc<AtomicU64>> {
+        let mut counters = self
+            .counters
+            .write()
+            .map_err(|e| color_eyre::eyre::eyre!("{e}"))?;
+
+        let counter = counters.entry(key.to_string()).or_default();
+        Ok(counter.clone())
+    }
+
+    pub fn get_and_increment(&self, key: &str) -> color_eyre::Result<u64> {
+        let mut counters = self
+            .counters
+            .write()
+            .map_err(|e| color_eyre::eyre::eyre!("{e}"))?;
+
+        let counter = counters.entry(key.to_string()).or_default();
+        let prev_value = counter.fetch_add(1, std::sync::atomic::Ordering::SeqCst);
+        Ok(prev_value)
     }
 }
 
@@ -50,7 +84,7 @@ pub fn apate_server_init_config(
     port: Option<u16>,
     log: Option<String>,
     files: Vec<String>,
-) -> anyhow::Result<AppConfig> {
+) -> color_eyre::Result<AppConfig> {
     let rust_log = log.unwrap_or(DEFAULT_RUST_LOG.to_string());
 
     env_logger::Builder::from_env(env_logger::Env::default().default_filter_or(rust_log)).init();
@@ -67,7 +101,7 @@ fn actix_init_server(config: AppConfig) -> std::io::Result<Server> {
         log::warn!("Starting server without deceits in specs");
     }
 
-    let data: Data<ApateContext> = Data::new(ApateContext::new(config.specs));
+    let data: Data<ApateState> = Data::new(ApateState::new(config.specs));
 
     let server = HttpServer::new(move || {
         App::new()
@@ -85,7 +119,7 @@ fn actix_init_server(config: AppConfig) -> std::io::Result<Server> {
 pub async fn process_request(
     req: HttpRequest,
     body: Bytes,
-    state: Data<ApateContext>,
+    state: Data<ApateState>,
 ) -> HttpResponse {
     let path = req.path().to_string();
 
@@ -100,7 +134,7 @@ pub async fn process_request(
 async fn deceit_api_handler(
     req: &HttpRequest,
     body: &Bytes,
-    state: &Data<ApateContext>,
+    state: &Data<ApateState>,
 ) -> HttpResponse {
     // TODO deal with unwrap
     let deceit = &state.specs.read().await.deceit;
@@ -139,7 +173,7 @@ async fn deceit_api_handler(
         };
 
         log::debug!("Deceit match successful (^_^). Processing response");
-        return match d.process_response(idx, &ctx) {
+        return match d.process_response(idx, &ctx, &state.counters) {
             Ok(good) => good,
             Err(e) => HttpResponse::InternalServerError().body(format!("It happened! {e}\n")),
         };
@@ -154,7 +188,7 @@ async fn deceit_api_handler(
 async fn admin_api_handler(
     req: &HttpRequest,
     body: &Bytes,
-    state: &Data<ApateContext>,
+    state: &Data<ApateState>,
 ) -> HttpResponse {
     let path = req.path().to_string();
     if path == ADMIN_API {
