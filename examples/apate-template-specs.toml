@@ -1,18 +1,7 @@
 # Explaining some advanced template language features
 # BTW apate use minijinja template engine which has jina compatible syntax.
 
-# Acessing context from template
-[[deceit]]
-uris = ["/tpl/ctx", "/tpl/ctx/{custom_value}"]
-headers = [["Content-Type", "text/plain"]]
-[[deceit.responses]]
-output = """
-[
-    {"id":42, "name":"Ivan", "surname": "Ivanov"},
-]
-
-"""
-
+# Apate template functions
 [[deceit]]
 uris = ["/tpl/fn"]
 headers = [["Content-Type", "text/markdown"]]
@@ -57,5 +46,61 @@ Return random number in some range:
   - random_hex(): {{ random_hex() }}
   - random_hex(8): {{ random_hex(8) }}
   - random_hex(4)-random_hex(8)-random_hex(2): {{ random_hex(4) }}-{{ random_hex(8) }}-{{ random_hex(2) }}
+
+"""
+
+
+# Acessing context from template
+[[deceit]]
+uris = ["/tpl/ctx", "/tpl/ctx/{custom_value}"]
+headers = [["Content-Type", "text/markdown"]]
+json_request = true
+[[deceit.responses]]
+output = """
+# Accessing request context
+
+
+## Current path
+Available in `path` variable.
+
+Current path is: {{ path }}
+
+
+## Path arguments
+
+Path arguments from uri pattern can be accessed via `path_args` dictionary.
+
+Path argument `custom_value` is: {{ path_args.custom_value if path_args.custom_value else 'NOT_EXISTS' }}
+
+
+## Query string arguments
+
+Template has context variable `query_args` which is a map with all query string arguments.
+
+Query string arguments found:
+
+{%- for key in query_args if query_args %}
+ - {{ key }} -> {{ query_args[key] }}
+{%- endfor %}
+
+
+## Request JSON payload
+
+If request payload is parsed as JSON it will be available as `request_json` variable.
+{%- if request_json %}
+
+JSON that was parsed and then encoded back: {{ request_json | tojson }}
+{%- endif %}
+
+
+## Headers
+
+Also template has a map variable `headers` with all request headers.
+
+Request headers are:
+
+{%- for key in headers if headers %}
+ - {{ key }} -> {{ headers[key] }}
+{%- endfor %}
 
 """

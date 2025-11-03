@@ -65,7 +65,9 @@ pub fn prepare_jinja_output(template: &str, ctx: &ResponseContext) -> color_eyre
     });
 
     let tpl = env.get_template(&tpl_id)?;
-    let response = tpl.render(ctx)?;
+    let response = tpl
+        .render(ctx)
+        .map_err(|e| color_eyre::eyre::eyre!("Can't render minijinja template: {e}"))?;
 
     Ok(response.into_bytes())
 }

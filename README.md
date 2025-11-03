@@ -87,8 +87,9 @@ I hope that you will be smart enough to understand it by yourself.
 
 ### Template syntax
 
-Response content utilize [minijinja](https://docs.rs/minijinja/latest/minijinja/) template engine.
+Response content utilize [minijinja](https://docs.rs/minijinja/latest/minijinja) template engine.
 Template syntax documentation can be found [here](https://docs.rs/minijinja/latest/minijinja/syntax).
+See also [minijinja filters](https://docs.rs/minijinja/latest/minijinja/filters).
 
 Look for template usage examples in [this specs file](./examples/apate-template-specs.toml).
 

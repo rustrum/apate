@@ -97,7 +97,7 @@ pub struct ResponseContext<'a> {
 
     path_args: &'a HashMap<&'a str, &'a str>,
 
-    input_json: Option<serde_json::Value>,
+    request_json: Option<serde_json::Value>,
 
     #[serde(skip_serializing)]
     pub(crate) response_code: Arc<AtomicU16>,
@@ -146,7 +146,7 @@ impl DeceitResponse {
             headers.insert(k.as_str(), v.to_str()?);
         }
 
-        let input_json = if deceit.json_request {
+        let request_json = if deceit.json_request && !ctx.body.trim_ascii().is_empty() {
             let body = String::from_utf8_lossy(ctx.body);
             Some(serde_json::from_slice::<serde_json::Value>(
                 body.as_bytes(),
@@ -160,7 +160,7 @@ impl DeceitResponse {
             headers,
             query_args: ctx.args_query,
             path_args: ctx.args_path,
-            input_json,
+            request_json,
             response_code: Arc::new(AtomicU16::new(0)),
             counters: cnt,
         };

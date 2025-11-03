@@ -85,7 +85,7 @@ output = """
 
 [[deceit.responses]]
 output = """
-{ "id": 42, "name": "{{ input_json.name }}", "surname": "{{ input_json.surname }}" }
+{ "id": 42, "name": "{{ request_json.name }}", "surname": "{{ request_json.surname }}" }
 
 """
 
