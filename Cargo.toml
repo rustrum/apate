@@ -8,12 +8,12 @@ license-file = "LICENSE"
 description = "API mocking server & rust unit tests library to mimic external 3rd party API endpoints"
 keywords = ["api", "server", "mocking", "integration", "testing"]
 
+[features]
+server = ["getopt3"]
+
 [[bin]]
 name = "apate"
 required-features = ["server"]
-
-[features]
-server = ["getopt3"]
 
 [dependencies]
 actix-router = "0.5"

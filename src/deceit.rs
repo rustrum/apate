@@ -10,14 +10,15 @@ use std::{
 };
 
 use actix_router::{Path, ResourceDef};
-use actix_web::{HttpResponse, HttpResponseBuilder, http::StatusCode};
+use actix_web::{HttpResponseBuilder, http::StatusCode};
 
 use serde::{Deserialize, Serialize};
 
 use crate::{
-    ApateCounters, AppConfig, RequestContext,
+    ApateConfig, ApateCounters, RequestContext,
     matchers::{Matcher, is_matcher_approves},
     output::OutputType,
+    processors::Processor,
 };
 
 const DEFAULT_RESPONSE_CODE: u16 = 200;
@@ -137,18 +138,15 @@ pub struct DeceitResponse {
 }
 
 impl DeceitResponse {
-    pub fn process(
+    pub fn prepare<'a>(
         &self,
         deceit: &Deceit,
-        ctx: &RequestContext,
-        cnt: &ApateCounters,
-    ) -> color_eyre::Result<HttpResponse> {
-        let rctx = create_responce_context(deceit, ctx, cnt)?;
-
+        drctx: &DeceitResponseContext<'a>,
+    ) -> color_eyre::Result<(HttpResponseBuilder, Vec<u8>)> {
         let output_body =
-            crate::output::build_response_body(self.output_type, &self.output, &rctx)?;
+            crate::output::build_response_body(self.output_type, &self.output, drctx)?;
 
-        let response_code_from_tpl = rctx.response_code.load(Ordering::Relaxed);
+        let response_code_from_tpl = drctx.response_code.load(Ordering::Relaxed);
         let response_code = if response_code_from_tpl > 0 {
             response_code_from_tpl
         } else {
@@ -160,11 +158,11 @@ impl DeceitResponse {
 
         insert_response_headers(&mut hrb, &deceit.headers, &self.headers);
 
-        Ok(hrb.body(output_body))
+        Ok((hrb, output_body))
     }
 }
 
-fn create_responce_context<'a>(
+pub fn create_responce_context<'a>(
     deceit: &'a Deceit,
     ctx: &'a RequestContext,
     cnt: &'a ApateCounters,
@@ -207,31 +205,6 @@ fn insert_response_headers(
     }
 }
 
-/// Set up custom logic that could be executed before/after rendering response.
-#[derive(Clone, Debug, Deserialize, Serialize)]
-#[serde(tag = "type", rename_all = "snake_case")]
-pub enum Processor {
-    Lua {
-        scope: ProcessorScope,
-        script: String,
-    },
-    LuaFile {
-        scope: ProcessorScope,
-        path: String,
-    },
-    /// Reserved for custom user processors
-    Custom {
-        scope: ProcessorScope,
-        id: String,
-    },
-}
-
-#[derive(Clone, Debug, Deserialize, Serialize)]
-pub enum ProcessorScope {
-    Pre,
-    Post,
-}
-
 pub struct DeceitBuilder {
     uris: Vec<String>,
 
@@ -268,8 +241,8 @@ impl DeceitBuilder {
     }
 
     /// Wraps single [`Deceit`] into a [`AppConfig`] with default parameters.
-    pub fn to_app_config(self) -> AppConfig {
-        AppConfig {
+    pub fn to_app_config(self) -> ApateConfig {
+        ApateConfig {
             specs: crate::ApateSpecs {
                 deceit: vec![self.build()],
             },
@@ -278,12 +251,13 @@ impl DeceitBuilder {
     }
 
     /// Wraps single [`Deceit`] into a [`AppConfig`] with specified port.
-    pub fn to_app_config_with_port(self, port: u16) -> AppConfig {
-        AppConfig {
+    pub fn to_app_config_with_port(self, port: u16) -> ApateConfig {
+        ApateConfig {
             port,
             specs: crate::ApateSpecs {
                 deceit: vec![self.build()],
             },
+            ..Default::default()
         }
     }
 

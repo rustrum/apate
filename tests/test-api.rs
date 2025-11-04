@@ -4,7 +4,7 @@ use std::collections::HashMap;
 use apate::deceit::{Deceit, DeceitBuilder, DeceitResponse, DeceitResponseBuilder};
 use apate::matchers::Matcher;
 use apate::test::{ApateTestServer, DEFAULT_PORT};
-use apate::{ApateSpecs, AppConfig, AppConfigBuilder};
+use apate::{ApateConfig, ApateConfigBuilder, ApateSpecs};
 
 const INIT_DELAY_MS: usize = 1;
 
@@ -20,7 +20,7 @@ fn non_async_test() {
     //apate::test::init_env_logger("debug");
 
     // An example how to build a config if fancy builders does not fit your needs.
-    let config = AppConfig {
+    let config = ApateConfig {
         specs: ApateSpecs {
             deceit: vec![Deceit {
                 uris: vec!["/user/check".to_string()],
@@ -113,7 +113,7 @@ async fn async_test() {
 #[serial]
 async fn complex_configuration_test() {
     // More complex configuration with several deceit
-    let config = AppConfigBuilder::default()
+    let config = ApateConfigBuilder::default()
         .add_deceit(
             DeceitBuilder::with_uris(&["/user/add"])
                 .require_method("POST")

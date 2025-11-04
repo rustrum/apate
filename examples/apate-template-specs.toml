@@ -70,7 +70,7 @@ Current path is: {{ path }}
 
 Path arguments from uri pattern can be accessed via `path_args` dictionary.
 
-Path argument `custom_value` is: {{ path_args.custom_value if path_args.custom_value else 'NOT_EXISTS' }}
+Path argument `custom_value` is: {{ path_args.custom_value | default('DOES_NOT_EXIST') }}
 
 
 ## Query string arguments

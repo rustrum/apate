@@ -1,16 +1,16 @@
 use std::io;
 
-use apate::{apate_run, apate_server_init_config};
+use apate::{apate_init_server_config, apate_server_run};
 
 #[actix_web::main]
 async fn main() -> io::Result<()> {
     let (port, log, spec_files) = parse_args()?;
 
-    let config = apate_server_init_config(port, log, spec_files).map_err(io::Error::other)?;
+    let config = apate_init_server_config(port, log, spec_files).map_err(io::Error::other)?;
 
     log::debug!("Configuration initialized: {:?}", config);
 
-    apate_run(config).await
+    apate_server_run(config).await
 }
 
 fn parse_args() -> io::Result<(Option<u16>, Option<String>, Vec<String>)> {

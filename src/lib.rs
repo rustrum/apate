@@ -2,6 +2,7 @@ pub mod deceit;
 mod handlers;
 pub mod matchers;
 mod output;
+mod processors;
 pub mod test;
 
 use deceit::Deceit;
@@ -23,6 +24,8 @@ use actix_web::{
 use async_lock::RwLock;
 use serde::{Deserialize, Serialize};
 
+use crate::processors::ApateProcessor;
+
 pub const DEFAULT_PORT: u16 = 8228;
 pub const DEFAULT_RUST_LOG: &str = "info,apate=debug";
 
@@ -31,21 +34,23 @@ const ADMIN_API_PREPEND: &str = "/apate/prepend";
 const ADMIN_API_REPLACE: &str = "/apate/replace";
 
 #[derive(Debug)]
-pub struct AppConfig {
+pub struct ApateConfig {
     pub port: u16,
+    pub processors: HashMap<String, ApateProcessor>,
     pub specs: ApateSpecs,
 }
 
-impl Default for AppConfig {
+impl Default for ApateConfig {
     fn default() -> Self {
         Self {
             port: DEFAULT_PORT,
             specs: Default::default(),
+            processors: Default::default(),
         }
     }
 }
 
-impl AppConfig {
+impl ApateConfig {
     pub fn try_new_defaults() -> color_eyre::Result<Self> {
         Self::try_new(Some(DEFAULT_PORT), Vec::new())
     }
@@ -61,10 +66,10 @@ impl AppConfig {
 
         let specs = Self::read_specs(specs_files)?;
 
-        Ok(AppConfig {
+        Ok(ApateConfig {
             port,
             specs,
-            // rust_log: env::var("RUST_LOG").unwrap_or("info,api_stub_server=debug".into()),
+            processors: Default::default(),
         })
     }
 
@@ -107,6 +112,14 @@ impl AppConfig {
             })
             .collect()
     }
+
+    fn into_state(self) -> ApateState {
+        ApateState {
+            specs: RwLock::new(self.specs),
+            counters: Default::default(),
+            processors: self.processors,
+        }
+    }
 }
 
 #[derive(Clone, Debug, Default, Deserialize, Serialize)]
@@ -118,15 +131,7 @@ pub struct ApateSpecs {
 pub struct ApateState {
     pub specs: RwLock<ApateSpecs>,
     pub counters: ApateCounters,
-}
-
-impl ApateState {
-    pub fn new(specs: ApateSpecs) -> Self {
-        Self {
-            specs: RwLock::new(specs),
-            counters: Default::default(),
-        }
-    }
+    pub processors: HashMap<String, ApateProcessor>,
 }
 
 #[derive(Clone, Default)]
@@ -166,28 +171,32 @@ pub struct RequestContext<'a> {
     pub args_path: &'a HashMap<&'a str, &'a str>,
 }
 
-pub fn apate_server_init_config(
+/// Create and run apate server based on input config.
+pub async fn apate_server_run(config: ApateConfig) -> std::io::Result<()> {
+    init_actix_web_server(config)?.await
+}
+
+/// Initialize server configuration with overrides.
+/// All arguments to this function will override configuration from ENV variables
+pub fn apate_init_server_config(
     port: Option<u16>,
     log: Option<String>,
     files: Vec<String>,
-) -> color_eyre::Result<AppConfig> {
+) -> color_eyre::Result<ApateConfig> {
     let rust_log = log.unwrap_or(DEFAULT_RUST_LOG.to_string());
 
     env_logger::Builder::from_env(env_logger::Env::default().default_filter_or(rust_log)).init();
 
-    AppConfig::try_new(port, files)
+    ApateConfig::try_new(port, files)
 }
 
-pub async fn apate_run(config: AppConfig) -> std::io::Result<()> {
-    actix_init_server(config)?.await
-}
-
-fn actix_init_server(config: AppConfig) -> std::io::Result<Server> {
+fn init_actix_web_server(config: ApateConfig) -> std::io::Result<Server> {
     if config.specs.deceit.is_empty() {
         log::warn!("Starting server without deceits in specs");
     }
+    let port = config.port;
 
-    let data: Data<ApateState> = Data::new(ApateState::new(config.specs));
+    let data: Data<ApateState> = Data::new(config.into_state());
 
     let server = HttpServer::new(move || {
         App::new()
@@ -195,28 +204,30 @@ fn actix_init_server(config: AppConfig) -> std::io::Result<Server> {
             .wrap(Logger::default()) // Add logging middleware
             .default_service(web::to(handlers::apate_server_handler))
     })
-    .bind((Ipv4Addr::UNSPECIFIED, config.port))?
+    .bind((Ipv4Addr::UNSPECIFIED, port))?
     .keep_alive(actix_web::http::KeepAlive::Disabled)
     .run();
 
     Ok(server)
 }
 
-pub struct AppConfigBuilder {
+pub struct ApateConfigBuilder {
     port: u16,
     deceit: Vec<Deceit>,
+    pub processors: HashMap<String, ApateProcessor>,
 }
 
-impl Default for AppConfigBuilder {
+impl Default for ApateConfigBuilder {
     fn default() -> Self {
         Self {
             port: DEFAULT_PORT,
             deceit: Default::default(),
+            processors: Default::default(),
         }
     }
 }
 
-impl AppConfigBuilder {
+impl ApateConfigBuilder {
     pub fn with_port(mut self, port: u16) -> Self {
         self.port = port;
         self
@@ -227,12 +238,18 @@ impl AppConfigBuilder {
         self
     }
 
-    pub fn build(self) -> AppConfig {
-        AppConfig {
+    pub fn add_processor(mut self, processor: ApateProcessor) -> Self {
+        self.processors.insert(processor.id.clone(), processor);
+        self
+    }
+
+    pub fn build(self) -> ApateConfig {
+        ApateConfig {
             port: self.port,
             specs: ApateSpecs {
                 deceit: self.deceit,
             },
+            processors: self.processors,
         }
     }
 }

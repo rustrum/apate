@@ -9,6 +9,7 @@ use actix_web::{
 
 use crate::{
     ADMIN_API, ADMIN_API_PREPEND, ADMIN_API_REPLACE, ApateSpecs, ApateState, RequestContext,
+    deceit::create_responce_context, processors::apply_processors,
 };
 
 /// Handle all apate server requests
@@ -67,8 +68,32 @@ async fn deceit_handler(req: &HttpRequest, body: &Bytes, state: &Data<ApateState
         };
 
         // At tis point all matchers checks passed
-        return match response.process(d, &ctx, &state.counters) {
-            Ok(good) => good,
+        let drctx = match create_responce_context(d, &ctx, &state.counters) {
+            Ok(ctx) => ctx,
+            Err(e) => {
+                return HttpResponse::InternalServerError()
+                    .body(format!("Cant create deceit context! {e}"));
+            }
+        };
+
+        return match response.prepare(d, &drctx) {
+            Ok((mut hrb, body)) => {
+                let mut prcs = Vec::with_capacity(d.processors.len() + response.processors.len());
+                prcs.extend(d.processors.iter());
+                prcs.extend(response.processors.iter());
+
+                match apply_processors(&state.processors, &prcs, &drctx, &body) {
+                    Ok(new_body) => {
+                        if let Some(bts) = new_body {
+                            hrb.body(bts)
+                        } else {
+                            hrb.body(body)
+                        }
+                    }
+                    Err(e) => HttpResponse::InternalServerError()
+                        .body(format!("Can't apply post processors! {e}\n")),
+                }
+            }
             Err(e) => HttpResponse::InternalServerError().body(format!("It happened! {e}\n")),
         };
     }

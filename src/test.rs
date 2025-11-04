@@ -1,6 +1,6 @@
 use actix_web::dev::ServerHandle;
 
-use crate::{AppConfig, actix_init_server};
+use crate::{ApateConfig, init_actix_web_server};
 
 pub use crate::{DEFAULT_PORT, DEFAULT_RUST_LOG};
 
@@ -43,12 +43,12 @@ impl ApateTestServer {
     /// Arguments:
     /// * `config`: The configuration for the server.
     /// * `delay_ms`: Delay after server start to let slow envs to inintialize.
-    pub fn start(config: AppConfig, delay_ms: usize) -> ApateTestServer {
+    pub fn start(config: ApateConfig, delay_ms: usize) -> ApateTestServer {
         if config.specs.deceit.is_empty() {
             log::warn!("Starting server without deceits in specs");
         }
 
-        let server = actix_init_server(config).expect("Test server must be initialized");
+        let server = init_actix_web_server(config).expect("Test server must be initialized");
         let server_handle = server.handle();
         let handle = std::thread::spawn(move || {
             actix_web::rt::Runtime::new()
