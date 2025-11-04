@@ -1,9 +1,6 @@
 use actix_web::dev::ServerHandle;
 
-use crate::actix_init_server;
-pub use crate::config::{ApateSpecs, AppConfig, AppConfigBuilder};
-pub use crate::deceit::{Deceit, DeceitBuilder, DeceitResponse, DeceitResponseBuilder};
-pub use crate::matchers::Matcher;
+use crate::{AppConfig, actix_init_server};
 
 pub use crate::{DEFAULT_PORT, DEFAULT_RUST_LOG};
 

@@ -8,8 +8,7 @@
 # Deceit will try to match URI and apply matchers against request.
 # On success response processing will be started.
 # If deceit level matchers will fail then next deceit will be tried.
-# Note that if response level matchig would fail next deceit will not be tried
-# and error will be returned instead.
+# Same logic apply for matchers on responses level.
 
 # Mocking users list functionality
 [[deceit]]
@@ -56,7 +55,6 @@ output = """
 
 """
 
-
 # Mocking user add functionality
 [[deceit]]
 uris = ["/user/add"]
@@ -88,7 +86,6 @@ output = """
 { "id": 42, "name": "{{ request_json.name }}", "surname": "{{ request_json.surname }}" }
 
 """
-
 
 # Mocking user get functionality
 [[deceit]]

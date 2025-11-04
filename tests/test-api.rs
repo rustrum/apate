@@ -1,10 +1,10 @@
 use serial_test::serial;
 use std::collections::HashMap;
 
-use apate::test::{
-    ApateSpecs, ApateTestServer, AppConfig, AppConfigBuilder, DEFAULT_PORT, Deceit, DeceitBuilder,
-    DeceitResponse, DeceitResponseBuilder, Matcher,
-};
+use apate::deceit::{Deceit, DeceitBuilder, DeceitResponse, DeceitResponseBuilder};
+use apate::matchers::Matcher;
+use apate::test::{ApateTestServer, DEFAULT_PORT};
+use apate::{ApateSpecs, AppConfig, AppConfigBuilder};
 
 const INIT_DELAY_MS: usize = 1;
 

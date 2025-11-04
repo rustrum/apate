@@ -7,7 +7,7 @@ use rand::{Rng as _, RngCore as _};
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
-use crate::deceit::ResponseContext;
+use crate::deceit::DeceitResponseContext;
 
 /// Define an approach how to handle `output` property from configuration.
 /// Result will be placed in HTTP response message body.
@@ -26,7 +26,7 @@ pub enum OutputType {
 pub fn build_response_body(
     tp: OutputType,
     output: &str,
-    ctx: &ResponseContext,
+    ctx: &DeceitResponseContext,
 ) -> color_eyre::Result<Vec<u8>> {
     match tp {
         OutputType::Jinja => prepare_jinja_output(output, ctx),
@@ -38,7 +38,10 @@ pub fn build_response_body(
     }
 }
 
-pub fn prepare_jinja_output(template: &str, ctx: &ResponseContext) -> color_eyre::Result<Vec<u8>> {
+pub fn prepare_jinja_output(
+    template: &str,
+    ctx: &DeceitResponseContext,
+) -> color_eyre::Result<Vec<u8>> {
     let mut env = init_minijinja();
     // let mut env = env.clone();
 

@@ -30,7 +30,7 @@ cargo install --features server --path .
 You could use next ENV variables:
 
  - `RUST_LOG` and `RUST_LOG_STYLE` - to configure logging
- - `APATHE_PORT` - to provide port to run server on (default 8545)
+ - `APATHE_PORT` - to provide port to run server on (default 8228)
  - `APATHE_SPECS_FILE...` - any ENV variable which name is started with such prefix will be parsed as a path to spec file
 
 Apate can be also configured with CLI arguments which has higher priority than ENV variables.
@@ -49,7 +49,7 @@ apate -p 8080 -l warn ./path/to/spec.toml ./path/to/another_spec.toml
 Some self explanatory tests examples [could be found here](./tests/test-api.rs).
 
 In a nutshell, you should create an instance of Apate server at the beginning of your test.
-And you will be able to call your API endpoints at `http://localhost:8545` (or any other port you'll specify).
+And you will be able to call your API endpoints at `http://localhost:8228` (or any other port you'll specify).
 
 This is a how it will looks like in the code.
 ```rust
@@ -72,7 +72,7 @@ fn my_api_test() {
     let _apate = ApateTestServer::start(config, 0);
 
     // That's all you need to do.
-    // Now you can call http://localhost:8545/user/check 
+    // Now you can call http://localhost:8228/user/check 
     // You will get JSON response: {"message":"Success"}
     // And response will have header: "Content-Type: application/json"
 }

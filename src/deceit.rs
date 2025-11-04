@@ -1,3 +1,6 @@
+//! Deceit is the unit responsible for processing serveral status URIs or path patters.
+//! All deceit related logic is placed into this module.
+
 use std::{
     collections::HashMap,
     sync::{
@@ -6,44 +9,66 @@ use std::{
     },
 };
 
+use actix_router::{Path, ResourceDef};
 use actix_web::{HttpResponse, HttpResponseBuilder, http::StatusCode};
-use color_eyre::eyre::bail;
+
 use serde::{Deserialize, Serialize};
 
 use crate::{
-    ApateCounters, RequestContext,
+    ApateCounters, AppConfig, RequestContext,
     matchers::{Matcher, is_matcher_approves},
     output::OutputType,
-    test::AppConfig,
 };
 
 const DEFAULT_RESPONSE_CODE: u16 = 200;
 
-/// Unit responsible for mocking actual URIs
+/// Specification unit that apllies to one or several URI paths.
 #[derive(Clone, Debug, Default, Deserialize, Serialize)]
 pub struct Deceit {
+    /// List of URIs that could be string prefixed with '/'
+    /// or a pattern with arguments like '/user/{user_id}'.
     pub uris: Vec<String>,
 
-    /// Common headers for all responses in this deceit.
+    /// Common response headers for current configuration unit.
     #[serde(default)]
     pub headers: Vec<(String, String)>,
 
+    /// Set of simple rules to run against input request.
+    /// If one matcher fails - current deceit processing will be skipped.
     #[serde(default)]
     pub matchers: Vec<Matcher>,
 
-    /// Will parse request as JSON
-    /// Could be pre processor as well
+    /// Parse request body as JSON and add it to the request context.
     #[serde(default)]
     pub json_request: bool,
 
     #[serde(default)]
     pub processors: Vec<Processor>,
 
+    /// Responses that can be applied after deceit level checks/matchers completed.
+    #[serde(default)]
     pub responses: Vec<DeceitResponse>,
 }
 
 impl Deceit {
-    pub fn has_match(&self, ctx: &RequestContext) -> Option<usize> {
+    pub fn match_againtst_uris<'a>(&self, request_path: &'a str) -> Option<Path<&'a str>> {
+        log::debug!(
+            "Checking path: {request_path} against deceit URIs: {:?}",
+            self.uris
+        );
+
+        let mut path = Path::new(request_path);
+
+        let resource = ResourceDef::new(self.uris.clone());
+
+        if resource.capture_match_info(&mut path) {
+            Some(path)
+        } else {
+            None
+        }
+    }
+
+    pub fn match_response(&self, ctx: &RequestContext) -> Option<usize> {
         // Top level matchers
         for matcher in &self.matchers {
             if !is_matcher_approves(matcher, ctx) {
@@ -51,6 +76,7 @@ impl Deceit {
             }
         }
 
+        // Deceit level matchers
         for (idx, dr) in self.responses.iter().enumerate() {
             if dr.matchers.is_empty() {
                 // Empty matchers - always yes
@@ -65,30 +91,11 @@ impl Deceit {
 
         None
     }
-
-    pub fn process_response(
-        &self,
-        idx: usize,
-        ctx: &RequestContext,
-        cnt: &ApateCounters,
-    ) -> color_eyre::Result<HttpResponse> {
-        for matcher in &self.matchers {
-            if !is_matcher_approves(matcher, ctx) {
-                bail!("Top level matcher does not approve this action {matcher:?}");
-            }
-        }
-
-        let Some(d) = self.responses.get(idx) else {
-            bail!("Wow we definitely must have response for this index {idx}");
-        };
-
-        d.process(self, ctx, cnt)
-    }
 }
 
-/// Context for response renderer and pre/post processors as well.
+/// Context for output renderers and pre/post processors as well.
 #[derive(Serialize)]
-pub struct ResponseContext<'a> {
+pub struct DeceitResponseContext<'a> {
     path: &'a str,
 
     headers: HashMap<&'a str, &'a str>,
@@ -112,6 +119,7 @@ pub struct DeceitResponse {
     #[serde(default)]
     pub code: Option<u16>,
 
+    /// Same as for [`Deceit`] but it will check next response on a failure
     #[serde(default)]
     pub matchers: Vec<Matcher>,
 
@@ -135,35 +143,7 @@ impl DeceitResponse {
         ctx: &RequestContext,
         cnt: &ApateCounters,
     ) -> color_eyre::Result<HttpResponse> {
-        for matcher in &self.matchers {
-            if !is_matcher_approves(matcher, ctx) {
-                bail!("Top level matcher does not approve this action {matcher:?}");
-            }
-        }
-
-        let mut headers = HashMap::new();
-        for (k, v) in ctx.req.headers().iter() {
-            headers.insert(k.as_str(), v.to_str()?);
-        }
-
-        let request_json = if deceit.json_request && !ctx.body.trim_ascii().is_empty() {
-            let body = String::from_utf8_lossy(ctx.body);
-            Some(serde_json::from_slice::<serde_json::Value>(
-                body.as_bytes(),
-            )?)
-        } else {
-            None
-        };
-
-        let rctx = ResponseContext {
-            path: ctx.req.path(),
-            headers,
-            query_args: ctx.args_query,
-            path_args: ctx.args_path,
-            request_json,
-            response_code: Arc::new(AtomicU16::new(0)),
-            counters: cnt,
-        };
+        let rctx = create_responce_context(deceit, ctx, cnt)?;
 
         let output_body =
             crate::output::build_response_body(self.output_type, &self.output, &rctx)?;
@@ -175,12 +155,43 @@ impl DeceitResponse {
             self.code.unwrap_or(DEFAULT_RESPONSE_CODE)
         };
 
-        let mut rbuilder: HttpResponseBuilder =
+        let mut hrb: HttpResponseBuilder =
             HttpResponseBuilder::new(StatusCode::from_u16(response_code)?);
-        insert_response_headers(&mut rbuilder, &deceit.headers, &self.headers);
 
-        Ok(rbuilder.body(output_body))
+        insert_response_headers(&mut hrb, &deceit.headers, &self.headers);
+
+        Ok(hrb.body(output_body))
     }
+}
+
+fn create_responce_context<'a>(
+    deceit: &'a Deceit,
+    ctx: &'a RequestContext,
+    cnt: &'a ApateCounters,
+) -> color_eyre::Result<DeceitResponseContext<'a>> {
+    let mut headers = HashMap::new();
+    for (k, v) in ctx.req.headers().iter() {
+        headers.insert(k.as_str(), v.to_str()?);
+    }
+
+    let request_json = if deceit.json_request && !ctx.body.trim_ascii().is_empty() {
+        let body = String::from_utf8_lossy(ctx.body);
+        Some(serde_json::from_slice::<serde_json::Value>(
+            body.as_bytes(),
+        )?)
+    } else {
+        None
+    };
+
+    Ok(DeceitResponseContext {
+        path: ctx.req.path(),
+        headers,
+        query_args: ctx.args_query,
+        path_args: ctx.args_path,
+        request_json,
+        response_code: Arc::new(AtomicU16::new(0)),
+        counters: cnt,
+    })
 }
 
 fn insert_response_headers(

@@ -3,17 +3,18 @@
 //!
 //! Matchers behaive different on deceit ane response levels:
 //!
-//!  - if matchers failed on deceit level, than next deceit will be handled (if any)
-//!  - if matchers failed on response level an error will be returned
+//!  - if matchers failed on deceit level, than next deceit will be handled
+//!  - if matchers failed on response level then next response will be handled
+//!  - if all matchers responses failed, than next deceit will be handled
 
 use jsonpath_rust::JsonPath as _;
 use serde::{Deserialize, Serialize};
 
 use crate::RequestContext;
 
-/// Matchers process request data and return boolean result that affetcts [`crate::deceit::Deceit`] selecting behaviour.
-/// Matchers defined on a top level (Deceit) must all path in order to start processing responses.
-/// Response level matches determine which response should be processed (basically first one that return all true).
+/// Matchers process request data and return boolean result that affetcts [`crate::deceit::Deceit`] processing behaviour.
+/// To process response all matchers on deceit level and appropriate response should pass.
+/// .
 #[derive(Clone, Debug, Deserialize, Serialize)]
 #[serde(tag = "type", rename_all = "snake_case")]
 pub enum Matcher {
@@ -26,6 +27,8 @@ pub enum Matcher {
     /// Matching URI path arguments extracted using paths patterns like `/user/:user_id` etc.
     PathArg { name: String, value: String },
     /// Run match logic agains request payload as JSON.
+    /// NOTICE you must enable request JSON parsing for [`crate::deceit::Deceit`].
+    ///
     ///  - `path` JSON Path expression to extract value
     ///  - `eq` value to match agains one extracted from JSON Path
     Json { path: String, eq: String },
