@@ -19,8 +19,8 @@ async fn main() -> io::Result<()> {
             "signer",
             JsonSignerPostProcessor::boxed(),
         ))
-        // Warning this part should be in TOML file but I'm too to load it from file
-        // Anyway you could get it via Apate admin API to figure out proper TOML syntax.
+        // Warning this part should be in TOML file but I'm too lazy to load it from file
+        // Anyway to figure out proper TOML syntax you could call admin API endpoint.
         .add_deceit(
             DeceitBuilder::with_uris(&["/transaction/{id}"])
                 .add_header("Content-type", "application/json")
@@ -63,16 +63,20 @@ impl PostProcessor for JsonSignerPostProcessor {
         _context: &apate::deceit::DeceitResponseContext<'a>,
         response: &[u8],
     ) -> Result<Option<Vec<u8>>, Box<dyn core::error::Error>> {
+        // (o_O) Very stupid example how to use custom input
         let seed = input.len();
-        let text = str::from_utf8(response)?;
 
-        let mut json_body: serde_json::Map<String, serde_json::Value> = serde_json::from_str(text)?;
+        // Response body generated from output is passed as bytes
+        // it is not always a string, binary response is also supported.
 
-        // Yes this is not a signature, but it is just an example
+        //  Parsing response as JSON string
+        let mut json_response: serde_json::Map<String, serde_json::Value> =
+            serde_json::from_slice(response)?;
+
         let mut data: Vec<u8> = Default::default();
 
         data.extend(
-            json_body
+            json_response
                 .get("id")
                 .unwrap_or_default()
                 .as_str()
@@ -80,7 +84,7 @@ impl PostProcessor for JsonSignerPostProcessor {
                 .as_bytes(),
         );
         data.extend(
-            json_body
+            json_response
                 .get("amount")
                 .unwrap_or_default()
                 .as_str()
@@ -90,9 +94,13 @@ impl PostProcessor for JsonSignerPostProcessor {
 
         let hash = cityhasher::hash_with_seed(&data, seed as u64);
 
-        json_body.insert("signature".to_string(), hash.into());
+        // Yes this is not a signature, but this is just an example
+        json_response.insert("signature".to_string(), hash.into());
 
-        let result = serde_json::to_string(&json_body)?.into_bytes();
+        // When post proressor returns Some the result will be used as a response
+        // Also all next post processors will receive it
+        // When returns None - original response will not be changed
+        let result = serde_json::to_string(&json_response)?.into_bytes();
         Ok(Some(result))
     }
 }
