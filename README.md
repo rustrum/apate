@@ -19,17 +19,19 @@ Right now almost all API is setted up and only small changes and new features wi
 ### Installation
 
 It is kinda tricky now you should build it from source.
-Clone repository, `cd` into it and run:
+
+Having `cargo` you can get it from `crates.io`
+
+```sh
+cargo install apate --features server
+```
+
+Also you can clone repository, `cd` into it and run:
 
 ```sh
 cargo install --features server --path .
 ```
 
-or you can get/build latest version from from crates.io
-
-```sh
-cargo install apate --features server
-```
 
 ### Configuration
 
