@@ -4,22 +4,17 @@ use serde::{Deserialize, Serialize};
 
 use crate::deceit::DeceitResponseContext;
 
-// Pre processing looks cool but absolutely useless for now
-// type PreProcessor = dyn for<'a> Fn(&DeceitResponseContext<'a>) -> color_eyre::Result<()>;
+/// Trait for custom user-defined logic to run after output response is prepared (rendered).
+pub trait PostProcessor: Sync + Send {
+    fn process<'a>(
+        &self,
+        input: &str,
+        context: &DeceitResponseContext<'a>,
+        response: &[u8],
+    ) -> Result<Option<Vec<u8>>, Box<dyn core::error::Error>>;
+}
 
-/// Post processor callback.
-/// Accepts:
-///
-///  - user input as str
-///  - current context
-///  - response message as bytes
-///
-/// As a result it could return new response message bytes.
-type PostProcessor = dyn for<'a> Fn(&str, &DeceitResponseContext<'a>, &[u8]) -> color_eyre::Result<Option<Vec<u8>>>
-    + Sync
-    + Send;
-
-/// Set up custom logic that could be executed before/after rendering response.
+/// Custom logic to execute after output content was prepared (rendered).
 #[derive(Clone, Debug, Deserialize, Serialize)]
 #[serde(tag = "type", rename_all = "snake_case")]
 pub enum Processor {
@@ -31,13 +26,14 @@ pub enum Processor {
     //     scope: ProcessorScope,
     //     path: String,
     // },
-    /// Reserved for custom user processors
+    /// References to custom user processor.
     Custom {
+        /// Processor with this ID should be added on server initialization.
         id: String,
 
+        /// Custom user input understandable only by processor logic.
         #[serde(default)]
         input: String,
-        // scope: ProcessorScope,
     },
 }
 
@@ -49,11 +45,12 @@ pub enum Processor {
 
 pub struct ApateProcessor {
     pub id: String,
-    pub post: Box<PostProcessor>,
+    pub post: Box<dyn PostProcessor>,
 }
 
 impl ApateProcessor {
-    pub fn post(id: &str, callback: Box<PostProcessor>) -> Self {
+    /// Creates post processor.
+    pub fn post(id: &str, callback: Box<dyn PostProcessor>) -> Self {
         Self {
             id: id.to_string(),
             post: callback,
@@ -66,7 +63,9 @@ impl ApateProcessor {
         rctx: &DeceitResponseContext<'a>,
         body: &[u8],
     ) -> color_eyre::Result<Option<Vec<u8>>> {
-        (*self.post)(input, rctx, body)
+        (*self.post)
+            .process(input, rctx, body)
+            .map_err(|e| color_eyre::eyre::eyre!("Post processor execution failed: {e}"))
     }
 }
 

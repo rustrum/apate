@@ -25,6 +25,12 @@ Clone repository, `cd` into it and run:
 cargo install --features server --path .
 ```
 
+or you can get/build latest version from from crates.io
+
+```sh
+cargo install apate --features server
+```
+
 ### Configuration
 
 You could use next ENV variables:
@@ -79,6 +85,13 @@ fn my_api_test() {
 ```
 
 
+## Custom Apate server
+
+Using Apate as a library you can spin up your own server.
+This is useful when you need to add custom rust logic to Apate.
+See [processors](./examples/processors.rs) example.
+
+
 ## Apate specification
 
 Respository contains [specification example file](./examples/apate-specs.toml) with verbose comments.
@@ -96,6 +109,15 @@ Look for template usage examples in [this specs file](./examples/apate-template-
 
 It is possible to respond with binary content instead of string.
 See examples [here](./examples/apate-specs-bin.toml).
+
+### Custom post processors
+
+You may need to add custom logic into API to make it looks real.
+For example all your responses must be signed.
+In this case it is better to implement signing functionality in Apate
+instead of adding "skip signature verification" flag to your main app.
+
+Usage examples could be found [here](./examples/processors.rs).
 
 
 ## Butt why do I really need Apate?

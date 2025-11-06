@@ -97,21 +97,21 @@ impl Deceit {
 /// Context for output renderers and pre/post processors as well.
 #[derive(Serialize)]
 pub struct DeceitResponseContext<'a> {
-    path: &'a str,
+    pub path: &'a str,
 
-    headers: HashMap<&'a str, &'a str>,
+    pub headers: HashMap<&'a str, &'a str>,
 
-    query_args: &'a HashMap<String, String>,
+    pub query_args: &'a HashMap<String, String>,
 
-    path_args: &'a HashMap<&'a str, &'a str>,
+    pub path_args: &'a HashMap<&'a str, &'a str>,
 
-    request_json: Option<serde_json::Value>,
-
-    #[serde(skip_serializing)]
-    pub(crate) response_code: Arc<AtomicU16>,
+    pub request_json: Option<serde_json::Value>,
 
     #[serde(skip_serializing)]
-    pub(crate) counters: &'a ApateCounters,
+    pub response_code: Arc<AtomicU16>,
+
+    #[serde(skip_serializing)]
+    pub counters: &'a ApateCounters,
 }
 
 #[derive(Clone, Debug, Default, Deserialize, Serialize)]
@@ -212,6 +212,8 @@ pub struct DeceitBuilder {
 
     matchers: Vec<Matcher>,
 
+    processors: Vec<Processor>,
+
     json_request: bool,
 
     responses: Vec<DeceitResponse>,
@@ -226,6 +228,7 @@ impl DeceitBuilder {
             matchers: Vec::new(),
             json_request: false,
             responses: Vec::new(),
+            processors: Vec::new(),
         }
     }
 
@@ -235,7 +238,7 @@ impl DeceitBuilder {
             headers: self.headers,
             matchers: self.matchers,
             json_request: self.json_request,
-            processors: vec![],
+            processors: self.processors,
             responses: self.responses,
         }
     }
@@ -263,6 +266,11 @@ impl DeceitBuilder {
 
     pub fn add_header(mut self, key: &str, value: &str) -> Self {
         self.headers.push((key.to_string(), value.to_string()));
+        self
+    }
+
+    pub fn add_processor(mut self, processor: Processor) -> Self {
+        self.processors.push(processor);
         self
     }
 
@@ -342,6 +350,8 @@ pub struct DeceitResponseBuilder {
 
     headers: Vec<(String, String)>,
 
+    processors: Vec<Processor>,
+
     output_type: OutputType,
 
     output: String,
@@ -353,7 +363,7 @@ impl DeceitResponseBuilder {
             code: self.code,
             matchers: self.matchers,
             headers: self.headers,
-            processors: vec![],
+            processors: self.processors,
             output_type: self.output_type,
             output: self.output,
         }
@@ -367,6 +377,11 @@ impl DeceitResponseBuilder {
     /// Add response header for this response
     pub fn add_header(mut self, key: &str, value: &str) -> Self {
         self.headers.push((key.to_string(), value.to_string()));
+        self
+    }
+
+    pub fn add_processor(mut self, processor: Processor) -> Self {
+        self.processors.push(processor);
         self
     }
 

@@ -2,7 +2,7 @@ pub mod deceit;
 mod handlers;
 pub mod matchers;
 mod output;
-mod processors;
+pub mod processors;
 pub mod test;
 
 use deceit::Deceit;
@@ -238,7 +238,7 @@ impl ApateConfigBuilder {
         self
     }
 
-    pub fn add_processor(mut self, processor: ApateProcessor) -> Self {
+    pub fn register_processor(mut self, processor: ApateProcessor) -> Self {
         self.processors.insert(processor.id.clone(), processor);
         self
     }
