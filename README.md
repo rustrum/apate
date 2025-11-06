@@ -94,7 +94,8 @@ Look for template usage examples in [this specs file](./examples/apate-template-
 
 ### Non string responses
 
-It is possible to respond with binary content instead of string. TBD later.
+It is possible to respond with binary content instead of string.
+See examples [here](./examples/apate-specs-bin.toml).
 
 
 ## Butt why do I really need Apate?

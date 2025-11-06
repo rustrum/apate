@@ -12,13 +12,14 @@ use crate::deceit::DeceitResponseContext;
 /// Define an approach how to handle `output` property from configuration.
 /// Result will be placed in HTTP response message body.
 #[derive(Default, Copy, Clone, Debug, Deserialize, Serialize)]
-#[serde(tag = "type", rename_all = "snake_case")]
+#[serde(rename_all = "snake_case")]
 pub enum OutputType {
     /// Handle output as minijinja template
     #[default]
     Jinja,
     /// Handle output as binary data that will be decoded from HEX string (no 0x prefix expected).
     Hex,
+    // #[serde(rename = "base64")]
     /// Handle output as binary data that will be decoded from Base64 string.
     Base64,
 }
@@ -31,10 +32,10 @@ pub fn build_response_body(
     match tp {
         OutputType::Jinja => prepare_jinja_output(output, ctx),
         OutputType::Hex => {
-            let hex_str = output.trim().strip_prefix("0x").unwrap_or(output);
+            let hex_str = output.trim().strip_prefix("0x").unwrap_or(output).trim();
             Ok(hex::decode(hex_str)?)
         }
-        OutputType::Base64 => Ok(base64::prelude::BASE64_STANDARD.decode(output)?),
+        OutputType::Base64 => Ok(base64::prelude::BASE64_STANDARD.decode(output.trim())?),
     }
 }
 
