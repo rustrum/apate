@@ -39,9 +39,24 @@ apate -p 8080 -l warn ./path/to/spec.toml ./path/to/another_spec.toml
 - positional arguments - paths to spec files
 
 
-## Apate docker image
+## Running Apate from docker image
 
-TBD
+You can spin up clean disposable container.
+
+```sh
+docker run --rm -p 8228:8228 ghcr.io/rustrum/apate:latest
+```
+
+It will run apate server without any URI deceit.
+Then you will add new specification via Apate API endpoints.
+
+Also you can mount your configurations into docker image and provide proper ENV variables. Apate admin API will still be available for you.
+
+```sh
+docker run --rm -p 8228:8228 -v $(pwd)/examples:/specs -e APATHE_SPECS_FILE_1=/specs/apate-specs.toml ghcr.io/rustrum/apate:latest
+```
+
+This example expects that you a running command from the apate git repository root.
 
 
 ## Using Apate in tests
