@@ -3,35 +3,26 @@
 [![crates.io](https://img.shields.io/crates/v/apate.svg)](https://crates.io/crates/apate)
 [![Released API docs](https://docs.rs/apate/badge.svg)](https://docs.rs/apate)
 
-API mocking service that main purpose is to help with integration and end-to-end testing.
+API mocking server that main purpose is to help with integration and end-to-end testing.
 
 Project named after Apate - the goddess and personification of deceit.
 
 
-## What is project state is it stable ?
+## Is it stable ?
 
-It will be stable after 0.1 MVP release that should be very soon.
 Right now almost all API is setted up and only small changes and new features will be provided.
+Soon I plan to release 0.1 release that could be considered as a stable enouph.
 
 
-## Running Apate server
+## Running Apate server locally
 
 ### Installation
 
-It is kinda tricky now you should build it from source.
-
-Having `cargo` you can get it from `crates.io`
+Having `cargo` you can get install it locally like this
 
 ```sh
-cargo install apate --features server
+cargo install apate
 ```
-
-Also you can clone repository, `cd` into it and run:
-
-```sh
-cargo install --features server --path .
-```
-
 
 ### Configuration
 
@@ -50,6 +41,11 @@ apate -p 8080 -l warn ./path/to/spec.toml ./path/to/another_spec.toml
 - `-p` - port to run server on
 - `-l` - logging level
 - positional arguments - paths to spec files
+
+
+## Apate docker image
+
+TBD
 
 
 ## Using Apate in tests

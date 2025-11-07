@@ -1,18 +1,21 @@
 [package]
 name = "apate"
-version = "0.0.6"
+version = "0.0.7"
 edition = "2024"
 homepage = "https://github.com/rustrum/apate"
 repository = "https://github.com/rustrum/apate.git"
 license-file = "LICENSE"
 description = "API mocking server & rust unit tests library to mimic external 3rd party API endpoints"
-keywords = ["api", "server", "mocking", "integration", "testing"]
+keywords = ["api", "rest", "mocking", "mockserver", "testing"]
 
 [[bin]]
 name = "apate"
 required-features = ["server"]
 
 [features]
+# having getopt in lib by default would not harm much
+# but it will be possible to disable default features if required
+default = ["server"]
 server = ["getopt3"]
 
 [dependencies]
