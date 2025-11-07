@@ -50,7 +50,7 @@ Return random number in some range:
 """
 
 
-# Acessing context from template
+# Accessing context from template
 [[deceit]]
 uris = ["/tpl/ctx", "/tpl/ctx/{custom_value}"]
 headers = [["Content-Type", "text/markdown"]]

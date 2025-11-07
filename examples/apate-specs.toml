@@ -1,6 +1,6 @@
 # Test specification which will be used with `cargo run`
 #
-# Configuration contains a list of so called "deciet" units.
+# Configuration contains a list of so called "deceit" units.
 # Each deceit provide responses for some set of URIs.
 # It is not prohibited to have several deceit units 
 # that mock same URI but I do not recommend it.
@@ -109,7 +109,7 @@ output = """
 
 """
 
-# Also we can use some template engine logick to do tricky  stuff :)
+# Also we can use some template engine logic to do tricky  stuff :)
 [[deceit.responses]]
 output = """
 {%- if query_args.id %}

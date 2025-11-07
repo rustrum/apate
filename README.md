@@ -10,19 +10,15 @@ Project named after Apate - the goddess and personification of deceit.
 
 ## Is it stable ?
 
-Right now almost all API is setted up and only small changes and new features will be provided.
-Soon I plan to release 0.1 release that could be considered as a stable enouph.
+Right now almost all API is settled up and only small changes and new features will be provided.
+Soon I plan to release 0.1 release that could be considered as a stable enough.
 
 
 ## Running Apate server locally
 
 ### Installation
 
-Having `cargo` you can get install it locally like this
-
-```sh
-cargo install apate
-```
+If you have `cargo` you can install easily : `cargo install apate`
 
 ### Configuration
 
@@ -92,7 +88,7 @@ See [processors](./examples/processors.rs) example.
 
 ## Apate specification
 
-Respository contains [specification example file](./examples/apate-specs.toml) with verbose comments.
+Repository contains [specification example file](./examples/apate-specs.toml) with verbose comments.
 I hope that you will be smart enough to understand it by yourself.
 
 ### Template syntax
@@ -122,7 +118,7 @@ Usage examples could be found [here](./examples/processors.rs).
 
 ### For local development
 
-Because it could be more convinient to interact with fast and predictable APIs on localhost that calling something far away.
+Because it could be more convenient to interact with fast and predictable APIs on localhost that calling something far away.
 
 ### For unit tests
 

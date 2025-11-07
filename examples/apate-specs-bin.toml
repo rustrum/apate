@@ -1,6 +1,6 @@
 # Examples of how to return binary data from API endpoints
 # Should use it to return some binary API response.
-# PNG examples are silly but clear enouph.
+# PNG examples are silly but clear enough.
 
 [[deceit]]
 uris = ["/file/base64.png"]
