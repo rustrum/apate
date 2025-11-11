@@ -1,7 +1,12 @@
-# Apate
+<p align="center" width="100%" style="text-align:center">
+<img src="./apate-logo.png" alt="Apate API mocking server" />
+</p>
 
-[![crates.io](https://img.shields.io/crates/v/apate.svg)](https://crates.io/crates/apate)
-[![Released API docs](https://docs.rs/apate/badge.svg)](https://docs.rs/apate)
+<p align="center" width="100%" style="text-align:center">
+<a href="https://crates.io/crates/apate"><img src="https://img.shields.io/crates/v/apate.svg" alt="Crates.io"></a>
+<a href="https://docs.rs/apate"><img src="https://docs.rs/apate/badge.svg" alt="Released API docs"></a>
+<p align="center" width="100%" style="text-align:center">
+
 
 API mocking server that main purpose is to help with integration and end-to-end testing.
 
@@ -44,7 +49,7 @@ apate -p 8080 -l warn ./path/to/spec.toml ./path/to/another_spec.toml
 You can spin up clean disposable container.
 
 ```sh
-docker run --rm -p 8228:8228 ghcr.io/rustrum/apate:latest
+docker run --rm -t -p 8228:8228 ghcr.io/rustrum/apate:latest
 ```
 
 It will run apate server without any URI deceit.
@@ -53,7 +58,7 @@ Then you will add new specification via Apate API endpoints.
 Also you can mount your configurations into docker image and provide proper ENV variables. Apate admin API will still be available for you.
 
 ```sh
-docker run --rm -p 8228:8228 -v $(pwd)/examples:/specs -e APATHE_SPECS_FILE_1=/specs/apate-specs.toml ghcr.io/rustrum/apate:latest
+docker run --rm -t -p 8228:8228 -v $(pwd)/examples:/specs -e APATHE_SPECS_FILE_1=/specs/apate-specs.toml ghcr.io/rustrum/apate:latest
 ```
 
 This example expects that you a running command from the apate git repository root.
