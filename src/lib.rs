@@ -24,14 +24,11 @@ use actix_web::{
 use async_lock::RwLock;
 use serde::{Deserialize, Serialize};
 
+use crate::handlers::ADMIN_API;
 use crate::processors::ApateProcessor;
 
 pub const DEFAULT_PORT: u16 = 8228;
 pub const DEFAULT_RUST_LOG: &str = "info,apate=debug";
-
-const ADMIN_API: &str = "/apate";
-const ADMIN_API_PREPEND: &str = "/apate/prepend";
-const ADMIN_API_REPLACE: &str = "/apate/replace";
 
 #[derive(Debug)]
 pub struct ApateConfig {
@@ -202,6 +199,7 @@ fn init_actix_web_server(config: ApateConfig) -> std::io::Result<Server> {
         App::new()
             .app_data(data.clone()) // Share config with handlers
             .wrap(Logger::default()) // Add logging middleware
+            .service(web::scope(ADMIN_API).configure(handlers::admin_service_config))
             .default_service(web::to(handlers::apate_server_handler))
     })
     .bind((Ipv4Addr::UNSPECIFIED, port))?

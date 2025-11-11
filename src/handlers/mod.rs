@@ -1,6 +1,10 @@
 //! This module has server logic to handle all URI requests.
 
+mod admin;
+
 use std::collections::HashMap;
+
+pub use admin::{ADMIN_API, admin_service_config};
 
 use actix_web::{
     HttpRequest, HttpResponse,
@@ -8,8 +12,7 @@ use actix_web::{
 };
 
 use crate::{
-    ADMIN_API, ADMIN_API_PREPEND, ADMIN_API_REPLACE, ApateSpecs, ApateState, RequestContext,
-    deceit::create_responce_context, processors::apply_processors,
+    ApateState, RequestContext, deceit::create_responce_context, processors::apply_processors,
 };
 
 /// Handle all apate server requests
@@ -18,12 +21,12 @@ pub async fn apate_server_handler(
     body: Bytes,
     state: Data<ApateState>,
 ) -> HttpResponse {
-    let path = req.path().to_string();
+    // let path = req.path().to_string();
 
-    if path.starts_with(ADMIN_API) {
-        log::debug!("Admin API requested: {}", path);
-        return admin_handler(&req, &body, &state).await;
-    }
+    // if path.starts_with(ADMIN_API) {
+    //     log::debug!("Admin API requested: {}", path);
+    //     return admin::apate_admin_handler(&req, &body, &state).await;
+    // }
 
     return deceit_handler(&req, &body, &state).await;
 }
@@ -102,53 +105,4 @@ async fn deceit_handler(req: &HttpRequest, body: &Bytes, state: &Data<ApateState
         "Nothing can handle your requiest with path: {}\n",
         req.path()
     ))
-}
-
-async fn admin_handler(req: &HttpRequest, body: &Bytes, state: &Data<ApateState>) -> HttpResponse {
-    let path = req.path().to_string();
-    if path == ADMIN_API {
-        let specs = state.specs.read().await;
-
-        return match toml::to_string(&*specs) {
-            Ok(toml) => HttpResponse::Ok()
-                .insert_header(("Content-Type", "application/x-toml"))
-                .body(toml),
-            Err(err) => HttpResponse::InternalServerError().body(format!("Serialize? No! {err}")),
-        };
-    }
-
-    if path == ADMIN_API_PREPEND || path == ADMIN_API_REPLACE {
-        let body_str = String::from_utf8_lossy(body);
-        // log::trace!("New specs submitted:\n{}", body_str);
-
-        match toml::from_str::<ApateSpecs>(&body_str) {
-            Ok(new_specs) => {
-                log::debug!("New specs: {:?}", new_specs);
-
-                // let state = req.app_data::<web::Data<RwLock<Handlers>>>().unwrap();
-                let mut specs = state.specs.write().await;
-
-                log::trace!("Before update: {:?}", *specs);
-
-                if path == ADMIN_API_PREPEND {
-                    let mut deceit = new_specs.deceit;
-                    deceit.extend(specs.deceit.clone());
-                    specs.deceit = deceit;
-
-                    log::debug!("After extend: {:?}", *specs);
-                    return HttpResponse::Ok().body("Specs extended with an input TOML");
-                } else {
-                    *specs = new_specs;
-                    log::debug!("After replace: {:?}", *specs);
-                    return HttpResponse::Ok().body("Specs replaced with and input TOML");
-                }
-            }
-            Err(e) => {
-                return HttpResponse::BadRequest()
-                    .body(format!("Failed to parse TOML from request body: {e:?}"));
-            }
-        };
-    }
-
-    HttpResponse::NotFound().body(format!("Admin API not available at provided path: {path}"))
 }
