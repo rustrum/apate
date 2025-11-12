@@ -26,7 +26,7 @@ Only small changes and new features planned for future stable release v0.1.0.
 You can spin up clean disposable container.
 
 ```sh
-docker run --rm -t -p 8228:8228 ghcr.io/rustrum/apate:latest
+docker run --rm -tp 8228:8228 ghcr.io/rustrum/apate:latest
 ```
 
 It will run apate server without any URI deceit.
@@ -35,7 +35,7 @@ So you should add new specification via API endpoints or web UI (see below).
 To start server with some specs mount your TOML specs into docker image and provide proper ENV variables.
 
 ```sh
-docker run --rm -t -p 8228:8228 -v $(pwd)/examples:/specs -e APATHE_SPECS_FILE_1=/specs/apate-specs.toml ghcr.io/rustrum/apate:latest
+docker run --rm -tp 8228:8228 -v $(pwd)/examples:/specs -e APATHE_SPECS_FILE_1=/specs/apate-specs.toml ghcr.io/rustrum/apate:latest
 ```
 
 Example above expect you to run command from the apate git repository root.
@@ -47,9 +47,9 @@ If you have `cargo` then just install it as `cargo install apate`. After than yo
 
 ## Apate server configuration
 
-### Fancy WEB UI
+### Fancy web UI
 
-Apate WEB UI located at `http://HOST:8228/apate`. It works for docker containers too.
+Apate web UI located at `http://HOST:8228/apate`. It works for docker containers too.
 
 **Pease notice** that specification shown in UI does not look very pretty.
 This is because is automatically generated from internal representation.
