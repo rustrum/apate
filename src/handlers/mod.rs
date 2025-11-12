@@ -1,9 +1,11 @@
 //! This module has server logic to handle all URI requests.
 
+#[cfg(feature = "server")]
 mod admin;
 
 use std::collections::HashMap;
 
+#[cfg(feature = "server")]
 pub use admin::{ADMIN_API, admin_service_config};
 
 use actix_web::{

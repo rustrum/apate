@@ -1,7 +1,10 @@
 use actix_web::{
-    HttpRequest, HttpResponse, get, post,
-    web::{Bytes, Data, ServiceConfig},
+    HttpRequest, HttpResponse, get,
+    http::header::CONTENT_TYPE,
+    post, routes,
+    web::{self, Bytes, Data, ServiceConfig},
 };
+use include_dir::{Dir, include_dir};
 use serde::Serialize;
 
 use crate::{ApateSpecs, ApateState};
@@ -10,6 +13,8 @@ pub const ADMIN_API: &str = "/apate";
 
 const PKG_VERSION: &str = env!("CARGO_PKG_VERSION");
 
+const ASSETS_DIR: Dir = include_dir!("$CARGO_MANIFEST_DIR/assets");
+
 #[derive(Serialize)]
 struct ApateInfo<'a> {
     name: &'a str,
@@ -17,11 +22,27 @@ struct ApateInfo<'a> {
 }
 
 pub fn admin_service_config(cfg: &mut ServiceConfig) {
-    cfg.service(apate_info)
+    cfg.service(apate_ui)
+        .service(apate_info)
         .service(specification_get)
         .service(specification_replace)
         .service(specification_append)
-        .service(specification_prepend);
+        .service(specification_prepend)
+        .service(admin_assets);
+}
+
+#[routes]
+#[get("")]
+#[get("{path:/*}")]
+async fn apate_ui() -> HttpResponse {
+    if let Some(file) = ASSETS_DIR.get_file("index.html") {
+        let body = web::Bytes::copy_from_slice(file.contents());
+        HttpResponse::Ok()
+            .insert_header((CONTENT_TYPE, "text/html"))
+            .body(body)
+    } else {
+        HttpResponse::NotFound().body("WTF index.html. This must not happen.".to_string())
+    }
 }
 
 #[get("/info")]
@@ -47,7 +68,7 @@ async fn specification_get(state: Data<ApateState>) -> HttpResponse {
 
     match toml::to_string(&*specs) {
         Ok(toml) => HttpResponse::Ok()
-            .insert_header(("Content-Type", "application/x-toml"))
+            .insert_header(("Content-Type", "text/x-toml"))
             .body(toml),
         Err(err) => {
             HttpResponse::InternalServerError().body(format!("Serialize? Not able to! {err}"))
@@ -55,7 +76,7 @@ async fn specification_get(state: Data<ApateState>) -> HttpResponse {
     }
 }
 
-#[post("/replace")]
+#[post("/specs/replace")]
 async fn specification_replace(
     _req: HttpRequest,
     body: Bytes,
@@ -73,7 +94,7 @@ async fn specification_replace(
     HttpResponse::Ok().body("Specification replaced".to_string())
 }
 
-#[post("/prepend")]
+#[post("/specs/prepend")]
 async fn specification_prepend(
     _req: HttpRequest,
     body: Bytes,
@@ -93,7 +114,7 @@ async fn specification_prepend(
     HttpResponse::Ok().body("New specification prepended to the existing one".to_string())
 }
 
-#[post("/append")]
+#[post("/specs/append")]
 async fn specification_append(
     _req: HttpRequest,
     body: Bytes,
@@ -117,4 +138,20 @@ fn parse_input_toml(body: &Bytes) -> Result<ApateSpecs, HttpResponse> {
     toml::from_str::<ApateSpecs>(&body_str).map_err(|e| {
         HttpResponse::BadRequest().body(format!("Failed to parse TOML from request body: {e:?}"))
     })
+}
+
+#[get("/assets/{filename:.*}")]
+async fn admin_assets(path: web::Path<String>) -> HttpResponse {
+    let filename = path.into_inner();
+
+    if let Some(file) = ASSETS_DIR.get_file(&filename) {
+        let body = web::Bytes::copy_from_slice(file.contents());
+        // let content_type = mime_guess::from_path(&filename).first_or_octet_stream();
+
+        HttpResponse::Ok()
+            // .insert_header((header::CONTENT_TYPE, content_type.as_ref()))
+            .body(body)
+    } else {
+        HttpResponse::NotFound().body(format!("File not found: {filename}"))
+    }
 }

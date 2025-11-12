@@ -1,0 +1,146 @@
+<!doctype html>
+<html>
+
+<head>
+    <meta charset="utf-8">
+    <link rel="icon" type="image/png" href="/apate/assets/apate-icon.png" />
+    <title>Apate API specification</title>
+    <link rel=stylesheet href="/apate/assets/codemirror.css">
+    <link rel=stylesheet href="/apate/assets/blackboard.css">
+    <link rel=stylesheet href="/apate/assets/simplescrollbars.css">
+    <script src="/apate/assets/codemirror.js"></script>
+    <script src="/apate/assets/toml.js"></script>
+    <script src="/apate/assets/simplescrollbars.js"></script>
+
+    <style>
+        body {
+            background: #0C1021;
+            max-width: 960px;
+            margin: 0 auto;
+            box-sizing: border-box;
+        }
+
+        .CodeMirror {
+            height: auto;
+        }
+
+        header {
+            text-align: center;
+            border-bottom: #e4cd42 solid 0.3ex;
+        }
+
+        footer {
+            text-align: center;
+            border-top: #e4cd42 solid 0.3ex;
+            padding: 1em 0;
+        }
+
+        main {
+            border: #f06369 solid;
+            border-width: 0 0.3ex;
+            margin: 1em 0;
+            padding: 0.5em 0;
+
+        }
+
+        #save-specs {
+            border: #3afbf2 solid 0.3ex;
+            background: #24282b;
+            color: white;
+            padding: 0.8em;
+            cursor: pointer;
+            font-size: medium;
+            font-weight: bold;
+        }
+
+        #save-specs:hover {
+            border-color: #f94de0;
+            background-color: #212554;
+            color: yellow;
+
+        }
+
+        #save-specs:active {
+            color: black;
+            border-color: #f06369;
+        }
+
+        .CodeMirror-hscrollbar {
+            scrollbar-width: initial;
+            scrollbar-color: #36f0eb #223b6c;
+        }
+    </style>
+</head>
+
+<body>
+    <header>
+        <a href="https://github.com/rustrum/apate" target="_blank"><img src="/apate/assets/apate-logo.png" alt="Apate API mocking server" /></a>
+    </header>
+    <main>
+        <textarea id="specs-editor" name="specs-editor">
+# Please wait 
+# While we are loading Apate specs from the server
+</textarea>
+    </main>
+    <footer>
+        <button id="save-specs" onclick="javascript:replaceSpecs()">Replace Specification</button>
+    </footer>
+    <script>
+        var editor = CodeMirror.fromTextArea(document.getElementById("specs-editor"), {
+            mode: { name: "toml" },
+            lineNumbers: true,
+            viewportMargin: Infinity,
+            theme: "blackboard",
+            scrollbarStyle: "simple"
+        });
+
+        const loadSpecs = function () {
+            fetch("/apate/specs")
+                .then(response => {
+                    if (response.ok) {
+                        // document.getElementById("specs-editor").value = response.text();
+                        // editor.setValue(specs);
+                        response.text().then(function (toml) {
+                            editor.setValue(toml);
+                        });
+                    } else {
+                        response.text().then(function (message) {
+                            alert("Specs load failed. " + message);
+                        });
+                    }
+
+                    return response;
+                }).catch(error => {
+                    alert("Specs load failed. " + error);
+                    console.error("Cant load specs.", error);
+                });
+        };
+        document.body.onload = loadSpecs;
+
+        const replaceSpecs = function () {
+            let specs = editor.getValue();
+            fetch("/apate/specs/replace", {
+                method: "POST",
+                body: specs
+            })
+                .then(response => {
+                    if (response.ok) {
+                        alert("Specs successfully updated \\(^_^)/");
+                        loadSpecs()
+                    } else {
+                        response.text().then(function (message) {
+                            alert("Specs update failed. " + message);
+                            console.error("Specs update failed.", message);
+                        });
+                    }
+                })
+                .catch(error => {
+                    alert("Specs update failed. " + error);
+                    console.error("Cant update specs.", error);
+                });
+        }
+
+    </script>
+</body>
+
+</html>

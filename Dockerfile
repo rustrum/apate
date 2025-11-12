@@ -15,4 +15,6 @@ COPY --from=builder /build/target/release/apate /
 
 EXPOSE 8228
 
+ENV RUST_LOG=info
+
 CMD ["/apate"]

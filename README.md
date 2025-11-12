@@ -1,5 +1,5 @@
 <p align="center" width="100%" style="text-align:center">
-<img src="./apate-logo.png" alt="Apate API mocking server" />
+<img src="./assets/apate-logo.png" alt="Apate API mocking server" />
 </p>
 
 <p align="center" width="100%" style="text-align:center">
@@ -15,17 +15,47 @@ Project named after Apate - the goddess and personification of deceit.
 
 ## Is it stable ?
 
-Right now almost all API is settled up and only small changes and new features will be provided.
-Soon I plan to release 0.1 release that could be considered as a stable enough.
+Yes it is!
+Only small changes and new features planned for future stable release v0.1.0.
 
 
-## Running Apate server locally
+## Running Apate server
 
-### Installation
+### Docker image
 
-If you have `cargo` you can install easily : `cargo install apate`
+You can spin up clean disposable container.
 
-### Configuration
+```sh
+docker run --rm -t -p 8228:8228 ghcr.io/rustrum/apate:latest
+```
+
+It will run apate server without any URI deceit.
+So you should add new specification via API endpoints or web UI (see below).
+
+To start server with some specs mount your TOML specs into docker image and provide proper ENV variables.
+
+```sh
+docker run --rm -t -p 8228:8228 -v $(pwd)/examples:/specs -e APATHE_SPECS_FILE_1=/specs/apate-specs.toml ghcr.io/rustrum/apate:latest
+```
+
+Example above expect you to run command from the apate git repository root.
+
+### Install & run locally via cargo
+
+If you have `cargo` then just install it as `cargo install apate`. After than you will have `apate` binary in your `$PATH`.
+
+
+## Apate server configuration
+
+### Fancy WEB UI
+
+Apate WEB UI located at `http://HOST:8228/apate`. It works for docker containers too.
+
+**Pease notice** that specification shown in UI does not look very pretty.
+This is because is automatically generated from internal representation.
+Please see `examples` folder to figure out how properly write TOML specs.
+
+### ENV variables and CLI args
 
 You could use next ENV variables:
 
@@ -43,28 +73,25 @@ apate -p 8080 -l warn ./path/to/spec.toml ./path/to/another_spec.toml
 - `-l` - logging level
 - positional arguments - paths to spec files
 
+### REST API
 
-## Running Apate from docker image
+If you like `curl` you can configure Apate while it is running.
 
-You can spin up clean disposable container.
+- GET `/apate/info` - returns JSON with basic info about current server
+- GET `/apate/specs` - return TOML with a specs file
+- POST `/apate/specs/replace` - replace current specs with a new one from the request body
+- POST `/apate/specs/append` - add specs from request after existing
+- POST `/apate/specs/prepend` - add specs from request before existing
+
+All POST methods require TOML specification in request body.
+Something like this:
 
 ```sh
-docker run --rm -t -p 8228:8228 ghcr.io/rustrum/apate:latest
+curl -X POST http://localhost:8228/apate/specs/replace -d @./new-specs.toml
 ```
 
-It will run apate server without any URI deceit.
-Then you will add new specification via Apate API endpoints.
 
-Also you can mount your configurations into docker image and provide proper ENV variables. Apate admin API will still be available for you.
-
-```sh
-docker run --rm -t -p 8228:8228 -v $(pwd)/examples:/specs -e APATHE_SPECS_FILE_1=/specs/apate-specs.toml ghcr.io/rustrum/apate:latest
-```
-
-This example expects that you a running command from the apate git repository root.
-
-
-## Using Apate in tests
+## Using Apate in rust tests
 
 Some self explanatory tests examples [could be found here](./tests/test-api.rs).
 
@@ -99,16 +126,15 @@ fn my_api_test() {
 ```
 
 
-## Custom Apate server
+## Making your custom Apate server
 
-Using Apate as a library you can spin up your own server.
-This is useful when you need to add custom rust logic to Apate.
+If you need to add custom rust logic to Apate you can easily create your own server based on Apate library.
 See [processors](./examples/processors.rs) example.
 
 
-## Apate specification
+## Apate specification files
 
-Repository contains [specification example file](./examples/apate-specs.toml) with verbose comments.
+Repo contains [specification example file](./examples/apate-specs.toml) with verbose comments.
 I hope that you will be smart enough to understand it by yourself.
 
 ### Template syntax
@@ -136,26 +162,10 @@ Usage examples could be found [here](./examples/processors.rs).
 
 ## Butt why do I really need Apate?
 
-### For local development
+You could try to mock any external API with Apate.
+The more stupid/unstable/unusable external API is the more reasons for you to use Apate.
 
-Because it could be more convenient to interact with fast and predictable APIs on localhost that calling something far away.
-
-### For unit tests
-
-There is no need to mock your application logic that performing HTTP calls.
-Just provide local API endpoints with predefined responses for each test.
-So the flow will be like this:
-```
-[call your lib logic] -> [real API call] -> [Apate] -> [handling response]
-```
-
-### Integration / E2E tests
-
-You could deploy Apate server within your dev/stage/whatever environment.
-Now you will have predictable responses without calling 3rd party API provider.
-It is very useful if 3rd party API provider does not have any test environment or it is not stable, has rate limits etc.
-
-### Load tests
-
-Apate server does not mean to be super fast but if deployed alongside your application it could work much better than remote server with some weird logic behind it. 
-Thus you will be able to focus mostly on your apps performance ignoring 3rd party API delays.
+- **rust unit tests** - to test your code fully without mocking anything.
+- **local development** - when running other API services on localhost is painful.
+- **integration tests** - if 3rd party API provider suck/stuck/etc it is better to run test suites against predictable API endpoints.
+- **load tests** - when deployed alongside your application Apate should respond fast, so no need to take external API delays into account.

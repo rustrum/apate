@@ -24,7 +24,6 @@ use actix_web::{
 use async_lock::RwLock;
 use serde::{Deserialize, Serialize};
 
-use crate::handlers::ADMIN_API;
 use crate::processors::ApateProcessor;
 
 pub const DEFAULT_PORT: u16 = 8228;
@@ -196,11 +195,13 @@ fn init_actix_web_server(config: ApateConfig) -> std::io::Result<Server> {
     let data: Data<ApateState> = Data::new(config.into_state());
 
     let server = HttpServer::new(move || {
-        App::new()
-            .app_data(data.clone()) // Share config with handlers
-            .wrap(Logger::default()) // Add logging middleware
-            .service(web::scope(ADMIN_API).configure(handlers::admin_service_config))
-            .default_service(web::to(handlers::apate_server_handler))
+        let mut app = App::new().app_data(data.clone()).wrap(Logger::default());
+        #[cfg(feature = "server")]
+        {
+            app = app
+                .service(web::scope(handlers::ADMIN_API).configure(handlers::admin_service_config));
+        }
+        app.default_service(web::to(handlers::apate_server_handler))
     })
     .bind((Ipv4Addr::UNSPECIFIED, port))?
     .keep_alive(actix_web::http::KeepAlive::Disabled)

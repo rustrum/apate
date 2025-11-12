@@ -16,7 +16,7 @@ required-features = ["server"]
 # having getopt in lib by default would not harm much
 # but it will be possible to disable default features if required
 default = ["server"]
-server = ["getopt3"]
+server = ["getopt3", "include_dir"]
 
 [dependencies]
 actix-router = "0.5"
@@ -39,7 +39,9 @@ tokio = { version = "1", features = ["full"] }
 toml = "0.9"
 uuid = { version = "1.18", features = ["v4"] }
 
+# server dependencies
 getopt3 = { version = "2.5.0", optional = true }
+include_dir = { version = "0.7", optional = true }
 
 [dev-dependencies]
 reqwest = { version = "0.12", features = ["json", "blocking"] }
