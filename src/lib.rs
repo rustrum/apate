@@ -24,6 +24,7 @@ use actix_web::{
 use async_lock::RwLock;
 use serde::{Deserialize, Serialize};
 
+use crate::output::MiniJinjaState;
 use crate::processors::ApateProcessor;
 
 pub const DEFAULT_PORT: u16 = 8228;
@@ -112,8 +113,8 @@ impl ApateConfig {
     fn into_state(self) -> ApateState {
         ApateState {
             specs: RwLock::new(self.specs),
-            counters: Default::default(),
             processors: self.processors,
+            ..Default::default()
         }
     }
 }
@@ -124,10 +125,18 @@ pub struct ApateSpecs {
 }
 
 /// Shared state for apate web server.
+#[derive(Default)]
 pub struct ApateState {
     pub specs: RwLock<ApateSpecs>,
     pub counters: ApateCounters,
     pub processors: HashMap<String, ApateProcessor>,
+    pub minijinja: MiniJinjaState,
+}
+
+impl ApateState {
+    pub fn clear_cache(&self) {
+        self.minijinja.clear();
+    }
 }
 
 #[derive(Clone, Default)]

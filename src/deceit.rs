@@ -17,7 +17,7 @@ use serde::{Deserialize, Serialize};
 use crate::{
     ApateConfig, ApateCounters, RequestContext,
     matchers::{Matcher, is_matcher_approves},
-    output::OutputType,
+    output::{MiniJinjaState, OutputType},
     processors::Processor,
 };
 
@@ -112,6 +112,9 @@ pub struct DeceitResponseContext<'a> {
 
     #[serde(skip_serializing)]
     pub counters: &'a ApateCounters,
+
+    #[serde(skip_serializing)]
+    pub minijinja: &'a MiniJinjaState,
 }
 
 #[derive(Clone, Debug, Default, Deserialize, Serialize)]
@@ -166,6 +169,7 @@ pub fn create_responce_context<'a>(
     deceit: &'a Deceit,
     ctx: &'a RequestContext,
     cnt: &'a ApateCounters,
+    minijinja: &'a MiniJinjaState,
 ) -> color_eyre::Result<DeceitResponseContext<'a>> {
     let mut headers = HashMap::new();
     for (k, v) in ctx.req.headers().iter() {
@@ -189,6 +193,7 @@ pub fn create_responce_context<'a>(
         request_json,
         response_code: Arc::new(AtomicU16::new(0)),
         counters: cnt,
+        minijinja,
     })
 }
 

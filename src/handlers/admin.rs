@@ -91,6 +91,8 @@ async fn specification_replace(
 
     specs.deceit = new_specs.deceit;
 
+    state.clear_cache();
+
     HttpResponse::Ok().body("Specification replaced".to_string())
 }
 
@@ -111,6 +113,8 @@ async fn specification_prepend(
     deceit.extend(specs.deceit.clone());
     specs.deceit = deceit;
 
+    state.clear_cache();
+
     HttpResponse::Ok().body("New specification prepended to the existing one".to_string())
 }
 
@@ -128,6 +132,8 @@ async fn specification_append(
     let mut specs = state.specs.write().await;
 
     specs.deceit.extend(new_specs.deceit);
+
+    state.clear_cache();
 
     HttpResponse::Ok().body("New specification appended to the existing one".to_string())
 }
@@ -147,7 +153,6 @@ async fn admin_assets(path: web::Path<String>) -> HttpResponse {
     if let Some(file) = ASSETS_DIR.get_file(&filename) {
         let body = web::Bytes::copy_from_slice(file.contents());
         // let content_type = mime_guess::from_path(&filename).first_or_octet_stream();
-
         HttpResponse::Ok()
             // .insert_header((header::CONTENT_TYPE, content_type.as_ref()))
             .body(body)

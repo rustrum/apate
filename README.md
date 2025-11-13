@@ -23,13 +23,13 @@ Only small changes and new features planned for future stable release v0.1.0.
 
 ### Docker image
 
-You can spin up clean disposable container.
+Launching a clean disposable container is easy with docker.
 
 ```sh
 docker run --rm -tp 8228:8228 ghcr.io/rustrum/apate:latest
 ```
 
-It will run apate server without any URI deceit.
+It will run Apate server without any URI deceit.
 So you should add new specification via API endpoints or web UI (see below).
 
 To start server with some specs mount your TOML specs into docker image and provide proper ENV variables.
@@ -38,22 +38,24 @@ To start server with some specs mount your TOML specs into docker image and prov
 docker run --rm -tp 8228:8228 -v $(pwd)/examples:/specs -e APATHE_SPECS_FILE_1=/specs/apate-specs.toml ghcr.io/rustrum/apate:latest
 ```
 
-Example above expect you to run command from the apate git repository root.
+Example above expecting you to execute `docker run` from the Apate git repository root.
 
 ### Install & run locally via cargo
 
-If you have `cargo` then just install it as `cargo install apate`. After than you will have `apate` binary in your `$PATH`.
+If you have `cargo` then just install it as `cargo install apate`.
+After that you will have `apate` binary in your `$PATH`.
 
 
 ## Apate server configuration
 
-### Fancy web UI
+### Web UI
 
-Apate web UI located at `http://HOST:8228/apate`. It works for docker containers too.
+Apate web UI is located at `http://HOST:PORT/apate` (will be `http://localhost:8228/apate` for most cases).
+Works for docker too.
 
-**Pease notice** that specification shown in UI does not look very pretty.
-This is because is automatically generated from internal representation.
-Please see `examples` folder to figure out how properly write TOML specs.
+**Please notice** that specification shown in web UI is not looking cool.
+All because it is automatically generated from the internal representation.
+Please see `examples` folder to figure out how to write TOML specs in pretty way.
 
 ### ENV variables and CLI args
 

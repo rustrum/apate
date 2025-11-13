@@ -1,8 +1,9 @@
 //! This module responsibility is to build HTTP response message body
 
-use std::sync::atomic::Ordering;
+use std::sync::{Arc, atomic::Ordering};
 
 use base64::Engine as _;
+use minijinja::Environment;
 use rand::{Rng as _, RngCore as _};
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
@@ -24,6 +25,56 @@ pub enum OutputType {
     Base64,
 }
 
+/// Holds cached minijinja environment.
+///
+/// Performance improvements are very small here.
+/// In my tests is like 4020 req/sec vs 4270 req/sec.
+/// Maybe with more complex templates difference will be more noticeable.
+///
+/// TODO: Remove it to do not add additional complexity?
+#[derive(Default, Clone)]
+pub struct MiniJinjaState {
+    env: Arc<std::sync::RwLock<Option<Environment<'static>>>>,
+}
+
+impl MiniJinjaState {
+    pub fn get_minijinja(&self) -> Environment<'static> {
+        self.init_minijinja_if_not();
+        let read_guard = self.env.read().expect("RwLock failed");
+        read_guard.clone().expect("Minijinja must exists here")
+    }
+
+    pub fn add_minijinja_template(&self, name: &str, source: &str) -> Result<(), minijinja::Error> {
+        self.init_minijinja_if_not();
+        let mut write_guard = self.env.write().expect("RwLock failed");
+        let env = write_guard
+            .as_mut()
+            .expect("Minijinja env must exists here");
+        let tpl = env.get_template(name);
+        if tpl.is_err() {
+            env.add_template_owned(name.to_string(), source.to_string())
+        } else {
+            Ok(())
+        }
+    }
+
+    fn init_minijinja_if_not(&self) {
+        let read_guard = self.env.read().expect("RwLock failed");
+        if read_guard.is_none() {
+            drop(read_guard);
+            let mut write_guard = self.env.write().expect("RwLock failed");
+            if write_guard.is_none() {
+                *write_guard = Some(init_minijinja());
+            }
+        }
+    }
+
+    pub fn clear(&self) {
+        let mut write_guard = self.env.write().expect("Write RwLock failed");
+        *write_guard = None;
+    }
+}
+
 pub fn build_response_body(
     tp: OutputType,
     output: &str,
@@ -43,11 +94,14 @@ pub fn prepare_jinja_output(
     template: &str,
     ctx: &DeceitResponseContext,
 ) -> color_eyre::Result<Vec<u8>> {
-    let mut env = init_minijinja();
-    // let mut env = env.clone();
+    // Old way no cache
+    // let mut env = init_minijinja();
+    // let tpl_id = template_id(template);
+    // env.add_template(&tpl_id, template)?;
 
     let tpl_id = template_id(template);
-    env.add_template(&tpl_id, template)?;
+    ctx.minijinja.add_minijinja_template(&tpl_id, template)?;
+    let mut env = ctx.minijinja.get_minijinja();
 
     let counters = ctx.counters.clone();
     env.add_function(

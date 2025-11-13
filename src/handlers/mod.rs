@@ -73,7 +73,7 @@ async fn deceit_handler(req: &HttpRequest, body: &Bytes, state: &Data<ApateState
         };
 
         // At tis point all matchers checks passed
-        let drctx = match create_responce_context(d, &ctx, &state.counters) {
+        let drctx = match create_responce_context(d, &ctx, &state.counters, &state.minijinja) {
             Ok(ctx) => ctx,
             Err(e) => {
                 return HttpResponse::InternalServerError()
