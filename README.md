@@ -171,3 +171,8 @@ The more stupid/unstable/unusable external API is the more reasons for you to us
 - **local development** - when running other API services on localhost is painful.
 - **integration tests** - if 3rd party API provider suck/stuck/etc it is better to run test suites against predictable API endpoints.
 - **load tests** - when deployed alongside your application Apate should respond fast, so no need to take external API delays into account.
+
+
+## License
+
+This product distributed under MIT license BUT only under certain conditions that listed in the LICENSE-TERMS file.

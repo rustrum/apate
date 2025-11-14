@@ -4,7 +4,7 @@ version = "0.0.8"
 edition = "2024"
 homepage = "https://github.com/rustrum/apate"
 repository = "https://github.com/rustrum/apate.git"
-license-file = "LICENSE"
+license-file = "LICENSE-TERMS"
 description = "API mocking server & rust unit tests library to mimic external 3rd party API endpoints"
 keywords = ["api", "rest", "mocking", "mockserver", "testing"]
 
