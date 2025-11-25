@@ -23,17 +23,10 @@ pub async fn apate_server_handler(
     body: Bytes,
     state: Data<ApateState>,
 ) -> HttpResponse {
-    // let path = req.path().to_string();
-
-    // if path.starts_with(ADMIN_API) {
-    //     log::debug!("Admin API requested: {}", path);
-    //     return admin::apate_admin_handler(&req, &body, &state).await;
-    // }
-
-    return deceit_handler(&req, &body, &state).await;
+    return deceit_handler(req, body, state).await;
 }
 
-async fn deceit_handler(req: &HttpRequest, body: &Bytes, state: &Data<ApateState>) -> HttpResponse {
+async fn deceit_handler(req: HttpRequest, body: Bytes, state: Data<ApateState>) -> HttpResponse {
     let deceit = &state.specs.read().await.deceit;
 
     let mut args_query: HashMap<String, String> = Default::default();
@@ -52,8 +45,8 @@ async fn deceit_handler(req: &HttpRequest, body: &Bytes, state: &Data<ApateState
         let args_path = path.iter().collect();
 
         let ctx = RequestContext {
-            req,
-            body,
+            req: &req,
+            body: &body,
             path: &path,
             args_query: &args_query,
             args_path: &args_path,

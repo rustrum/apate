@@ -1,0 +1,35 @@
+[[deceit]]
+uris = ["/lua/match"]
+headers = [["Content-Type", "application/json"]]
+
+[[deceit.matchers]]
+type = "lua"
+script = """
+local ctx = select(1, ...)
+
+log("Ctx path is: " .. ctx:path())
+
+local foo = ctx:get_query_arg("foo")
+if foo then
+    warn("Query arg \\"foo\\" is: " .. foo)
+end
+
+local agent = ctx:get_header("User-Agent")
+if agent then
+    log("User agent is: " .. agent)
+end
+
+if foo == "none" then
+    return false
+end
+
+return true
+"""
+
+[[deceit.responses]]
+output = """
+[
+    {"id":42, "name":"Ivan", "surname": "Ivanov"},
+]
+
+"""
