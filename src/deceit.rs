@@ -52,13 +52,13 @@ pub struct Deceit {
 }
 
 impl Deceit {
-    pub fn match_againtst_uris<'a>(&self, request_path: &'a str) -> Option<Path<&'a str>> {
+    pub fn match_againtst_uris(&self, request_path: &str) -> Option<Path<String>> {
         log::debug!(
             "Checking path: {request_path} against deceit URIs: {:?}",
             self.uris
         );
 
-        let mut path = Path::new(request_path);
+        let mut path = Path::new(request_path.to_string());
 
         let resource = ResourceDef::new(self.uris.clone());
 
@@ -103,7 +103,7 @@ pub struct DeceitResponseContext<'a> {
 
     pub query_args: &'a HashMap<String, String>,
 
-    pub path_args: &'a HashMap<&'a str, &'a str>,
+    pub path_args: &'a HashMap<String, String>,
 
     pub request_json: Option<serde_json::Value>,
 
@@ -177,7 +177,7 @@ pub fn create_responce_context<'a>(
     }
 
     let request_json = if deceit.json_request && !ctx.body.trim_ascii().is_empty() {
-        let body = String::from_utf8_lossy(ctx.body);
+        let body = String::from_utf8_lossy(&ctx.body);
         Some(serde_json::from_slice::<serde_json::Value>(
             body.as_bytes(),
         )?)
@@ -188,8 +188,8 @@ pub fn create_responce_context<'a>(
     Ok(DeceitResponseContext {
         path: ctx.req.path(),
         headers,
-        query_args: ctx.args_query,
-        path_args: ctx.args_path,
+        query_args: &ctx.args_query,
+        path_args: &ctx.args_path,
         request_json,
         response_code: Arc::new(AtomicU16::new(0)),
         counters: cnt,

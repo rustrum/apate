@@ -3,8 +3,9 @@
 #[cfg(feature = "server")]
 mod admin;
 
-use std::collections::HashMap;
+use std::{collections::HashMap, rc::Rc};
 
+use actix_router::Path;
 #[cfg(feature = "server")]
 pub use admin::{ADMIN_API, admin_service_config};
 
@@ -23,7 +24,7 @@ pub async fn apate_server_handler(
     body: Bytes,
     state: Data<ApateState>,
 ) -> HttpResponse {
-    return deceit_handler(req, body, state).await;
+    deceit_handler(req, body, state).await
 }
 
 async fn deceit_handler(req: HttpRequest, body: Bytes, state: Data<ApateState>) -> HttpResponse {
@@ -37,20 +38,25 @@ async fn deceit_handler(req: HttpRequest, body: Bytes, state: Data<ApateState>) 
         log::error!("Can't decode query string from URL");
     }
 
+    let mut ctx = RequestContext {
+        req: Rc::new(req),
+        body: Rc::new(body),
+        path: Rc::new(Path::new("/".to_string())),
+        args_query: Rc::new(args_query),
+        args_path: Rc::new(Default::default()),
+    };
+
     for d in deceit {
-        let Some(path) = d.match_againtst_uris(req.path()) else {
+        let Some(path) = d.match_againtst_uris(ctx.req.path()) else {
             continue;
         };
 
-        let args_path = path.iter().collect();
+        let args_path = path
+            .iter()
+            .map(|(k, v)| (k.to_string(), v.to_string()))
+            .collect();
 
-        let ctx = RequestContext {
-            req: &req,
-            body: &body,
-            path: &path,
-            args_query: &args_query,
-            args_path: &args_path,
-        };
+        ctx.update_paths(path, args_path);
 
         log::trace!("Request context is: {ctx:?}");
 
@@ -98,6 +104,6 @@ async fn deceit_handler(req: HttpRequest, body: Bytes, state: Data<ApateState>) 
 
     HttpResponse::NotFound().body(format!(
         "Nothing can handle your requiest with path: {}\n",
-        req.path()
+        ctx.req.path()
     ))
 }

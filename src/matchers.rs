@@ -59,7 +59,7 @@ pub fn is_matcher_approves(matcher: &Matcher, ctx: &RequestContext) -> bool {
         Matcher::Method { eq } => match_method(eq.as_str(), ctx),
         Matcher::Header { key, value } => match_header(key.as_str(), value.as_str(), ctx),
         Matcher::Json { path, eq } => match_json(path.as_str(), eq.as_str(), ctx),
-        Matcher::Lua { script } => lua::match_lua(script.as_str(), ctx),
+        Matcher::Lua { script } => lua::match_lua(script.as_str(), ctx.clone()),
     }
 }
 
@@ -91,7 +91,7 @@ pub fn match_header(key: &str, value: &str, ctx: &RequestContext) -> bool {
 }
 
 pub fn match_json(path: &str, value: &str, ctx: &RequestContext) -> bool {
-    let body = String::from_utf8_lossy(ctx.body);
+    let body = String::from_utf8_lossy(&ctx.body);
 
     let json = match serde_json::from_slice::<serde_json::Value>(body.as_bytes()) {
         Ok(json) => json,
@@ -111,51 +111,37 @@ pub fn match_json(path: &str, value: &str, ctx: &RequestContext) -> bool {
 }
 
 mod lua {
-    use std::collections::HashMap;
-
-    use actix_web::http::header::HeaderMap;
     use mlua::prelude::*;
 
     use crate::RequestContext;
 
-    /// Ideally it should not copy all data from RequestContext but reuse it instead.
-    /// Current implementation of a RequestContext with lifetimes does not allow to do it.
     struct LuaRequestContext {
-        path: String,
-        args_query: HashMap<String, String>,
-        args_path: HashMap<String, String>,
-        headers: HeaderMap,
+        ctx: RequestContext,
     }
 
     impl LuaRequestContext {
-        fn new(ctx: &RequestContext) -> Self {
-            Self {
-                path: ctx.path.as_str().to_string(),
-                headers: ctx.req.headers().clone(),
-                args_query: ctx.args_query.clone(),
-                args_path: ctx
-                    .args_path
-                    .iter()
-                    .map(|(k, v)| (k.to_string(), v.to_string()))
-                    .collect(),
-            }
+        fn new(ctx: RequestContext) -> Self {
+            Self { ctx }
         }
     }
 
     impl LuaUserData for LuaRequestContext {
         fn add_methods<M: LuaUserDataMethods<Self>>(methods: &mut M) {
-            methods.add_method("path", |_, this, ()| Ok(this.path.clone()));
+            methods.add_method("path", |_, this, ()| {
+                let path = this.ctx.path.as_str().to_string();
+                Ok(path)
+            });
 
             methods.add_method("get_query_arg", |_, this, key: String| {
-                Ok(this.args_query.get(&key).cloned())
+                Ok(this.ctx.args_query.get(&key).cloned())
             });
 
             methods.add_method("get_path_arg", |_, this, key: String| {
-                Ok(this.args_path.get(&key).cloned())
+                Ok(this.ctx.args_path.get(&key).cloned())
             });
 
             methods.add_method("get_header", |_, this, key: String| {
-                let result = if let Some(header) = this.headers.get(&key) {
+                let result = if let Some(header) = this.ctx.req.headers().get(&key) {
                     let mapped = header.to_str().map_err(mlua::Error::external)?.to_string();
                     Some(mapped)
                 } else {
@@ -166,7 +152,7 @@ mod lua {
         }
     }
 
-    pub fn match_lua(script: &str, ctx: &RequestContext) -> bool {
+    pub fn match_lua(script: &str, ctx: RequestContext) -> bool {
         let lua = Lua::new();
 
         lua.globals()

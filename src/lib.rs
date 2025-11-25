@@ -10,6 +10,7 @@ use deceit::Deceit;
 use std::collections::HashMap;
 use std::io::Read as _;
 use std::net::Ipv4Addr;
+use std::rc::Rc;
 use std::sync::Arc;
 use std::sync::atomic::AtomicU64;
 
@@ -167,13 +168,20 @@ impl ApateCounters {
     }
 }
 
-#[derive(Debug)]
-pub struct RequestContext<'a> {
-    pub req: &'a HttpRequest,
-    pub body: &'a Bytes,
-    pub path: &'a Path<&'a str>,
-    pub args_query: &'a HashMap<String, String>,
-    pub args_path: &'a HashMap<&'a str, &'a str>,
+#[derive(Debug, Clone)]
+pub struct RequestContext {
+    pub req: Rc<HttpRequest>,
+    pub body: Rc<Bytes>,
+    pub path: Rc<Path<String>>,
+    pub args_query: Rc<HashMap<String, String>>,
+    pub args_path: Rc<HashMap<String, String>>,
+}
+
+impl RequestContext {
+    pub fn update_paths(&mut self, path: Path<String>, args_path: HashMap<String, String>) {
+        self.path = Rc::new(path);
+        self.args_path = Rc::new(args_path);
+    }
 }
 
 /// Create and run apate server based on input config.
