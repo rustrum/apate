@@ -8,9 +8,13 @@
 //!  - if all matchers responses failed, than next deceit will be handled
 
 use jsonpath_rust::JsonPath as _;
+use mlua::Function;
 use serde::{Deserialize, Serialize};
 
-use crate::RequestContext;
+use crate::{
+    RequestContext, ResourceRef,
+    lua::{LuaRequestContext, LuaState},
+};
 
 /// Matchers process request data and return boolean result that affects [`crate::deceit::Deceit`] processing behavior.
 /// To process response all matchers on deceit level and appropriate response should pass.
@@ -50,16 +54,29 @@ pub enum Matcher {
     Lua {
         script: String,
     },
+
+    LuaScript {
+        id: String,
+        args: Vec<String>,
+    },
 }
 
-pub fn is_matcher_approves(matcher: &Matcher, ctx: &RequestContext) -> bool {
+pub fn is_matcher_approves(
+    rref: &ResourceRef,
+    matcher: &Matcher,
+    ctx: &RequestContext,
+    lua: &LuaState,
+) -> bool {
     match matcher {
         Matcher::QueryArg { name, value } => match_query_arg(name.as_str(), value.as_str(), ctx),
         Matcher::PathArg { name, value } => match_path_arg(name.as_str(), value.as_str(), ctx),
         Matcher::Method { eq } => match_method(eq.as_str(), ctx),
         Matcher::Header { key, value } => match_header(key.as_str(), value.as_str(), ctx),
         Matcher::Json { path, eq } => match_json(path.as_str(), eq.as_str(), ctx),
-        Matcher::Lua { script } => lua::match_lua(script.as_str(), ctx.clone()),
+        Matcher::Lua { script } => match_lua(rref, lua, script.as_str(), ctx.clone()),
+        Matcher::LuaScript { id, args } => {
+            match_lua_script(rref, lua, id.as_str(), ctx.clone(), args.clone())
+        }
     }
 }
 
@@ -110,98 +127,53 @@ pub fn match_json(path: &str, value: &str, ctx: &RequestContext) -> bool {
     })
 }
 
-mod lua {
-    use mlua::prelude::*;
-
-    use crate::RequestContext;
-
-    struct LuaRequestContext {
-        ctx: RequestContext,
-    }
-
-    impl LuaRequestContext {
-        fn new(ctx: RequestContext) -> Self {
-            Self { ctx }
+pub fn match_lua_script(
+    rref: &ResourceRef,
+    lua: &LuaState,
+    script_id: &str,
+    ctx: RequestContext,
+    args: Vec<String>,
+) -> bool {
+    let lua_fn = match lua.get_lua_script(script_id) {
+        Ok(lfn) => lfn,
+        Err(e) => {
+            log::error!(
+                "Can't load LUA top level scrip by id:{script_id} path:{} {e:?}",
+                rref.as_string()
+            );
+            return false;
         }
-    }
+    };
+    call_lua_fn(lua_fn, ctx.into(), args)
+}
 
-    impl LuaUserData for LuaRequestContext {
-        fn add_methods<M: LuaUserDataMethods<Self>>(methods: &mut M) {
-            methods.add_method("path", |_, this, ()| {
-                let path = this.ctx.path.as_str().to_string();
-                Ok(path)
-            });
-
-            methods.add_method("get_query_arg", |_, this, key: String| {
-                Ok(this.ctx.args_query.get(&key).cloned())
-            });
-
-            methods.add_method("get_path_arg", |_, this, key: String| {
-                Ok(this.ctx.args_path.get(&key).cloned())
-            });
-
-            methods.add_method("get_header", |_, this, key: String| {
-                let result = if let Some(header) = this.ctx.req.headers().get(&key) {
-                    let mapped = header.to_str().map_err(mlua::Error::external)?.to_string();
-                    Some(mapped)
-                } else {
-                    None
-                };
-                Ok(result)
-            });
+pub fn match_lua(rref: &ResourceRef, lua: &LuaState, script: &str, ctx: RequestContext) -> bool {
+    let id = rref.to_resource_id("lua-matcher");
+    let lua_fn = match lua.to_lua_function(id.clone(), script) {
+        Ok(lfn) => lfn,
+        Err(e) => {
+            log::error!("Can't load LUA matcher by path:{} {e:?}", rref.as_string());
+            return false;
         }
-    }
+    };
+    call_lua_fn(lua_fn, ctx.into(), vec![])
+}
 
-    pub fn match_lua(script: &str, ctx: RequestContext) -> bool {
-        let lua = Lua::new();
+fn call_lua_fn(lua_fn: Function, ctx: LuaRequestContext, args: Vec<String>) -> bool {
+    let result = lua_fn.call::<mlua::Value>((ctx, args));
 
-        lua.globals()
-            .set(
-                "log",
-                lua.create_function(|_, (msg,): (String,)| {
-                    log::info!("LUA: {msg}");
-                    Ok(())
-                })
-                .unwrap(),
-            )
-            .unwrap();
-
-        lua.globals()
-            .set(
-                "warn",
-                lua.create_function(|_, (msg,): (String,)| {
-                    log::warn!("LUA: {msg}");
-                    Ok(())
-                })
-                .unwrap(),
-            )
-            .unwrap();
-
-        let lua_fn = lua.load(script).into_function();
-
-        let lua_fn = match lua_fn {
-            Ok(v) => v,
-            Err(e) => {
-                log::error!("Can't compile LUA script {e:?}");
-                return false;
-            }
-        };
-
-        let result = lua_fn.call::<mlua::Value>((LuaRequestContext::new(ctx),));
-
-        match result {
-            Ok(v) => {
-                if let Some(r) = v.as_boolean() {
-                    r
-                } else {
-                    log::error!("Can't parse LUA matchers result as boolean");
-                    false
-                }
-            }
-            Err(e) => {
-                log::error!("Can't execute LUA matcher {e:?}");
+    match result {
+        Ok(v) => {
+            if let Some(r) = v.as_boolean() {
+                r
+            } else {
+                log::error!("Can't parse LUA matchers result as boolean. {v:?}");
                 false
             }
+        }
+        Err(e) => {
+            log::error!("Can't execute LUA matcher {e:?}");
+            false
         }
     }
 }

@@ -1,5 +1,6 @@
 pub mod deceit;
 mod handlers;
+pub mod lua;
 pub mod matchers;
 mod output;
 pub mod processors;
@@ -25,6 +26,7 @@ use actix_web::{
 use async_lock::RwLock;
 use serde::{Deserialize, Serialize};
 
+use crate::lua::{LuaScript, LuaState};
 use crate::output::MiniJinjaState;
 use crate::processors::ApateProcessor;
 
@@ -75,13 +77,13 @@ impl ApateConfig {
         let mut specs = ApateSpecs::default();
 
         for path in specs_files {
-            let stub = Self::parse_specs_from(&path)?;
-            specs.deceit.extend(stub.deceit);
+            let parsed = Self::parse_specs_from(&path)?;
+            specs.append(parsed);
         }
 
         for path in Self::read_paths_from_env() {
-            let stub = Self::parse_specs_from(&path)?;
-            specs.deceit.extend(stub.deceit);
+            let parsed = Self::parse_specs_from(&path)?;
+            specs.append(parsed);
         }
         Ok(specs)
     }
@@ -112,9 +114,12 @@ impl ApateConfig {
     }
 
     fn into_state(self) -> ApateState {
+        let lua = LuaState::default();
+        lua.clear_and_update(self.specs.lua.clone());
         ApateState {
             specs: RwLock::new(self.specs),
             processors: self.processors,
+            lua,
             ..Default::default()
         }
     }
@@ -122,7 +127,25 @@ impl ApateConfig {
 
 #[derive(Clone, Debug, Default, Deserialize, Serialize)]
 pub struct ApateSpecs {
+    #[serde(default)]
+    pub lua: Vec<LuaScript>,
+    #[serde(default)]
     pub deceit: Vec<Deceit>,
+}
+
+impl ApateSpecs {
+    pub fn append(&mut self, specs: ApateSpecs) {
+        self.deceit.extend(specs.deceit);
+        self.lua.extend(specs.lua);
+    }
+
+    pub fn prepend(&mut self, mut specs: ApateSpecs) {
+        specs.deceit.extend(self.deceit.clone());
+        specs.lua.extend(self.lua.clone());
+
+        self.deceit = specs.deceit;
+        self.lua = specs.lua;
+    }
 }
 
 /// Shared state for apate web server.
@@ -132,11 +155,13 @@ pub struct ApateState {
     pub counters: ApateCounters,
     pub processors: HashMap<String, ApateProcessor>,
     pub minijinja: MiniJinjaState,
+    pub lua: LuaState,
 }
 
 impl ApateState {
     pub fn clear_cache(&self) {
         self.minijinja.clear();
+        // self.lua.clear();
     }
 }
 
@@ -264,9 +289,43 @@ impl ApateConfigBuilder {
             port: self.port,
             specs: ApateSpecs {
                 deceit: self.deceit,
+                ..Default::default()
             },
             processors: self.processors,
         }
+    }
+}
+
+/// Represents resource path in the configuration.
+/// It's just ids of the arrays we are iterating right now.
+#[derive(Clone)]
+pub struct ResourceRef {
+    ids: Vec<usize>,
+}
+
+impl ResourceRef {
+    pub fn new(top_level_id: usize) -> Self {
+        Self {
+            ids: vec![top_level_id],
+        }
+    }
+
+    pub fn with_level(&self, id: usize) -> Self {
+        let mut next = self.clone();
+        next.ids.push(id);
+        next
+    }
+
+    pub fn as_string(&self) -> String {
+        self.ids
+            .iter()
+            .map(|id| id.to_string())
+            .collect::<Vec<String>>()
+            .join("-")
+    }
+
+    pub fn to_resource_id(&self, resource_type: &str) -> String {
+        format!("{resource_type}:{}", self.as_string())
     }
 }
 

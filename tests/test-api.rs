@@ -34,6 +34,7 @@ fn non_async_test() {
                 }],
                 ..Default::default()
             }],
+            ..Default::default()
         },
         ..Default::default()
     };

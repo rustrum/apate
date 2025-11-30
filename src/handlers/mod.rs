@@ -15,7 +15,8 @@ use actix_web::{
 };
 
 use crate::{
-    ApateState, RequestContext, deceit::create_responce_context, processors::apply_processors,
+    ApateState, RequestContext, ResourceRef, deceit::create_responce_context,
+    processors::apply_processors,
 };
 
 /// Handle all apate server requests
@@ -46,7 +47,7 @@ async fn deceit_handler(req: HttpRequest, body: Bytes, state: Data<ApateState>) 
         args_path: Rc::new(Default::default()),
     };
 
-    for d in deceit {
+    for (deceit_idx, d) in deceit.iter().enumerate() {
         let Some(path) = d.match_againtst_uris(ctx.req.path()) else {
             continue;
         };
@@ -60,7 +61,8 @@ async fn deceit_handler(req: HttpRequest, body: Bytes, state: Data<ApateState>) 
 
         log::trace!("Request context is: {ctx:?}");
 
-        let Some(idx) = d.match_response(&ctx) else {
+        let deceit_ref = ResourceRef::new(deceit_idx);
+        let Some(idx) = d.match_response(&deceit_ref, &ctx, &state.lua) else {
             continue;
         };
 
@@ -71,7 +73,9 @@ async fn deceit_handler(req: HttpRequest, body: Bytes, state: Data<ApateState>) 
             continue;
         };
 
-        // At tis point all matchers checks passed
+        // Here all matchers checks passed
+        // Now we are processing response
+        // At this point we can't skip to the next deceit anymore
         let drctx = match create_responce_context(d, &ctx, &state.counters, &state.minijinja) {
             Ok(ctx) => ctx,
             Err(e) => {

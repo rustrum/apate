@@ -31,7 +31,7 @@ pub enum OutputType {
 /// In my tests is like 4020 req/sec vs 4270 req/sec.
 /// Maybe with more complex templates difference will be more noticeable.
 ///
-/// TODO: Remove it to do not add additional complexity?
+/// TODO: Maybe remove it to do not add additional complexity?
 #[derive(Default, Clone)]
 pub struct MiniJinjaState {
     env: Arc<std::sync::RwLock<Option<Environment<'static>>>>,
@@ -139,6 +139,7 @@ pub(crate) fn init_minijinja() -> minijinja::Environment<'static> {
     env
 }
 
+/// TODO make it less stupid
 fn template_id(content: &str) -> String {
     let hash1: u64 = cityhasher::hash_with_seed(content, 42);
     let hash2: u64 = cityhasher::hash_with_seed(content, 69);

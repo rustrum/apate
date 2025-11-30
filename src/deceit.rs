@@ -15,7 +15,8 @@ use actix_web::{HttpResponseBuilder, http::StatusCode};
 use serde::{Deserialize, Serialize};
 
 use crate::{
-    ApateConfig, ApateCounters, RequestContext,
+    ApateConfig, ApateCounters, RequestContext, ResourceRef,
+    lua::LuaState,
     matchers::{Matcher, is_matcher_approves},
     output::{MiniJinjaState, OutputType},
     processors::Processor,
@@ -23,7 +24,7 @@ use crate::{
 
 const DEFAULT_RESPONSE_CODE: u16 = 200;
 
-/// Specification unit that apllies to one or several URI paths.
+/// Specification unit that applies to one or several URI paths.
 #[derive(Clone, Debug, Default, Deserialize, Serialize)]
 pub struct Deceit {
     /// List of URIs that could be string prefixed with '/'
@@ -69,10 +70,16 @@ impl Deceit {
         }
     }
 
-    pub fn match_response(&self, ctx: &RequestContext) -> Option<usize> {
+    pub fn match_response(
+        &self,
+        rref: &ResourceRef,
+        ctx: &RequestContext,
+        lua: &LuaState,
+    ) -> Option<usize> {
         // Top level matchers
-        for matcher in &self.matchers {
-            if !is_matcher_approves(matcher, ctx) {
+        for (mid, matcher) in self.matchers.iter().enumerate() {
+            let matcher_ref = rref.with_level(mid);
+            if !is_matcher_approves(&matcher_ref, matcher, ctx, lua) {
                 return None;
             }
         }
@@ -83,8 +90,10 @@ impl Deceit {
                 // Empty matchers - always yes
                 return Some(idx);
             }
-            for matcher in &dr.matchers {
-                if is_matcher_approves(matcher, ctx) {
+            let deceit_ref = rref.with_level(idx);
+            for (mid, matcher) in dr.matchers.iter().enumerate() {
+                let matcher_ref = deceit_ref.with_level(mid);
+                if is_matcher_approves(&matcher_ref, matcher, ctx, lua) {
                     return Some(idx);
                 }
             }
@@ -253,6 +262,7 @@ impl DeceitBuilder {
         ApateConfig {
             specs: crate::ApateSpecs {
                 deceit: vec![self.build()],
+                ..Default::default()
             },
             ..Default::default()
         }
@@ -264,6 +274,7 @@ impl DeceitBuilder {
             port,
             specs: crate::ApateSpecs {
                 deceit: vec![self.build()],
+                ..Default::default()
             },
             ..Default::default()
         }
