@@ -3,6 +3,7 @@
 
 use std::{
     collections::HashMap,
+    rc::Rc,
     sync::{
         Arc,
         atomic::{AtomicU16, Ordering},
@@ -20,6 +21,7 @@ use crate::{
     matchers::{Matcher, is_matcher_approves},
     output::{MiniJinjaState, OutputType},
     processors::Processor,
+    rhai::RhaiState,
 };
 
 const DEFAULT_RESPONSE_CODE: u16 = 200;
@@ -75,11 +77,12 @@ impl Deceit {
         rref: &ResourceRef,
         ctx: &RequestContext,
         lua: &LuaState,
+        rhai: &RhaiState,
     ) -> Option<usize> {
         // Top level matchers
         for (mid, matcher) in self.matchers.iter().enumerate() {
             let matcher_ref = rref.with_level(mid);
-            if !is_matcher_approves(&matcher_ref, matcher, ctx, lua) {
+            if !is_matcher_approves(&matcher_ref, matcher, ctx, lua, rhai) {
                 return None;
             }
         }
@@ -93,7 +96,7 @@ impl Deceit {
             let deceit_ref = rref.with_level(idx);
             for (mid, matcher) in dr.matchers.iter().enumerate() {
                 let matcher_ref = deceit_ref.with_level(mid);
-                if is_matcher_approves(&matcher_ref, matcher, ctx, lua) {
+                if is_matcher_approves(&matcher_ref, matcher, ctx, lua, rhai) {
                     return Some(idx);
                 }
             }
@@ -104,26 +107,23 @@ impl Deceit {
 }
 
 /// Context for output renderers and pre/post processors as well.
-#[derive(Serialize)]
-pub struct DeceitResponseContext<'a> {
-    pub path: &'a str,
+#[derive(Clone)]
+pub struct DeceitResponseContext {
+    pub path: String,
 
-    pub headers: HashMap<&'a str, &'a str>,
+    pub headers: Rc<HashMap<String, String>>,
 
-    pub query_args: &'a HashMap<String, String>,
+    pub query_args: Arc<HashMap<String, String>>,
 
-    pub path_args: &'a HashMap<String, String>,
+    pub path_args: Arc<HashMap<String, String>>,
 
-    pub request_json: Option<serde_json::Value>,
+    pub request_json: Rc<Option<serde_json::Value>>,
 
-    #[serde(skip_serializing)]
     pub response_code: Arc<AtomicU16>,
 
-    #[serde(skip_serializing)]
-    pub counters: &'a ApateCounters,
+    pub counters: ApateCounters,
 
-    #[serde(skip_serializing)]
-    pub minijinja: &'a MiniJinjaState,
+    pub minijinja: MiniJinjaState,
 }
 
 #[derive(Clone, Debug, Default, Deserialize, Serialize)]
@@ -150,10 +150,10 @@ pub struct DeceitResponse {
 }
 
 impl DeceitResponse {
-    pub fn prepare<'a>(
+    pub fn prepare(
         &self,
         deceit: &Deceit,
-        drctx: &DeceitResponseContext<'a>,
+        drctx: &DeceitResponseContext,
     ) -> color_eyre::Result<(HttpResponseBuilder, Vec<u8>)> {
         let output_body =
             crate::output::build_response_body(self.output_type, &self.output, drctx)?;
@@ -174,15 +174,15 @@ impl DeceitResponse {
     }
 }
 
-pub fn create_responce_context<'a>(
-    deceit: &'a Deceit,
-    ctx: &'a RequestContext,
-    cnt: &'a ApateCounters,
-    minijinja: &'a MiniJinjaState,
-) -> color_eyre::Result<DeceitResponseContext<'a>> {
+pub fn create_responce_context(
+    deceit: &Deceit,
+    ctx: RequestContext,
+    cnt: ApateCounters,
+    minijinja: MiniJinjaState,
+) -> color_eyre::Result<DeceitResponseContext> {
     let mut headers = HashMap::new();
     for (k, v) in ctx.req.headers().iter() {
-        headers.insert(k.as_str(), v.to_str()?);
+        headers.insert(k.to_string(), v.to_str()?.to_string());
     }
 
     let request_json = if deceit.json_request && !ctx.body.trim_ascii().is_empty() {
@@ -195,11 +195,11 @@ pub fn create_responce_context<'a>(
     };
 
     Ok(DeceitResponseContext {
-        path: ctx.req.path(),
-        headers,
-        query_args: &ctx.args_query,
-        path_args: &ctx.args_path,
-        request_json,
+        path: ctx.req.path().to_string(),
+        headers: Rc::new(headers),
+        query_args: ctx.args_query.clone(),
+        path_args: ctx.args_path.clone(),
+        request_json: Rc::new(request_json),
         response_code: Arc::new(AtomicU16::new(0)),
         counters: cnt,
         minijinja,
@@ -257,7 +257,7 @@ impl DeceitBuilder {
         }
     }
 
-    /// Wraps single [`Deceit`] into a [`AppConfig`] with default parameters.
+    /// Wraps single [`Deceit`] into a [`ApateConfig`] with default parameters.
     pub fn to_app_config(self) -> ApateConfig {
         ApateConfig {
             specs: crate::ApateSpecs {
@@ -268,7 +268,7 @@ impl DeceitBuilder {
         }
     }
 
-    /// Wraps single [`Deceit`] into a [`AppConfig`] with specified port.
+    /// Wraps single [`Deceit`] into a [`ApateConfig`] with specified port.
     pub fn to_app_config_with_port(self, port: u16) -> ApateConfig {
         ApateConfig {
             port,

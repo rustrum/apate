@@ -3,7 +3,7 @@
 #[cfg(feature = "server")]
 mod admin;
 
-use std::{collections::HashMap, rc::Rc};
+use std::{collections::HashMap, rc::Rc, sync::Arc};
 
 use actix_router::Path;
 #[cfg(feature = "server")]
@@ -41,10 +41,10 @@ async fn deceit_handler(req: HttpRequest, body: Bytes, state: Data<ApateState>) 
 
     let mut ctx = RequestContext {
         req: Rc::new(req),
-        body: Rc::new(body),
-        path: Rc::new(Path::new("/".to_string())),
-        args_query: Rc::new(args_query),
-        args_path: Rc::new(Default::default()),
+        body: Arc::new(body),
+        path: Arc::new(Path::new("/".to_string())),
+        args_query: Arc::new(args_query),
+        args_path: Arc::new(Default::default()),
     };
 
     for (deceit_idx, d) in deceit.iter().enumerate() {
@@ -62,7 +62,7 @@ async fn deceit_handler(req: HttpRequest, body: Bytes, state: Data<ApateState>) 
         log::trace!("Request context is: {ctx:?}");
 
         let deceit_ref = ResourceRef::new(deceit_idx);
-        let Some(idx) = d.match_response(&deceit_ref, &ctx, &state.lua) else {
+        let Some(idx) = d.match_response(&deceit_ref, &ctx, &state.lua, &state.rhai) else {
             continue;
         };
 
@@ -76,7 +76,12 @@ async fn deceit_handler(req: HttpRequest, body: Bytes, state: Data<ApateState>) 
         // Here all matchers checks passed
         // Now we are processing response
         // At this point we can't skip to the next deceit anymore
-        let drctx = match create_responce_context(d, &ctx, &state.counters, &state.minijinja) {
+        let drctx = match create_responce_context(
+            d,
+            ctx.clone(),
+            state.counters.clone(),
+            state.minijinja.clone(),
+        ) {
             Ok(ctx) => ctx,
             Err(e) => {
                 return HttpResponse::InternalServerError()
@@ -90,7 +95,14 @@ async fn deceit_handler(req: HttpRequest, body: Bytes, state: Data<ApateState>) 
                 prcs.extend(d.processors.iter());
                 prcs.extend(response.processors.iter());
 
-                match apply_processors(&state.processors, &prcs, &drctx, &body) {
+                match apply_processors(
+                    &deceit_ref,
+                    &state.processors,
+                    &prcs,
+                    &drctx,
+                    &body,
+                    &state.lua,
+                ) {
                     Ok(new_body) => {
                         if let Some(bts) = new_body {
                             hrb.body(bts)

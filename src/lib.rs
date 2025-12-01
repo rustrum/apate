@@ -4,6 +4,7 @@ pub mod lua;
 pub mod matchers;
 mod output;
 pub mod processors;
+pub mod rhai;
 pub mod test;
 
 use deceit::Deceit;
@@ -29,6 +30,7 @@ use serde::{Deserialize, Serialize};
 use crate::lua::{LuaScript, LuaState};
 use crate::output::MiniJinjaState;
 use crate::processors::ApateProcessor;
+use crate::rhai::{RhaiScript, RhaiState};
 
 pub const DEFAULT_PORT: u16 = 8228;
 pub const DEFAULT_RUST_LOG: &str = "info,apate=debug";
@@ -116,10 +118,14 @@ impl ApateConfig {
     fn into_state(self) -> ApateState {
         let lua = LuaState::default();
         lua.clear_and_update(self.specs.lua.clone());
+
+        let rhai = RhaiState::default();
+        rhai.clear_and_update(self.specs.rhai.clone());
         ApateState {
             specs: RwLock::new(self.specs),
             processors: self.processors,
             lua,
+            rhai,
             ..Default::default()
         }
     }
@@ -130,6 +136,8 @@ pub struct ApateSpecs {
     #[serde(default)]
     pub lua: Vec<LuaScript>,
     #[serde(default)]
+    pub rhai: Vec<RhaiScript>,
+    #[serde(default)]
     pub deceit: Vec<Deceit>,
 }
 
@@ -137,14 +145,17 @@ impl ApateSpecs {
     pub fn append(&mut self, specs: ApateSpecs) {
         self.deceit.extend(specs.deceit);
         self.lua.extend(specs.lua);
+        self.rhai.extend(specs.rhai);
     }
 
     pub fn prepend(&mut self, mut specs: ApateSpecs) {
         specs.deceit.extend(self.deceit.clone());
         specs.lua.extend(self.lua.clone());
+        specs.rhai.extend(self.rhai.clone());
 
         self.deceit = specs.deceit;
         self.lua = specs.lua;
+        self.rhai = specs.rhai;
     }
 }
 
@@ -156,12 +167,12 @@ pub struct ApateState {
     pub processors: HashMap<String, ApateProcessor>,
     pub minijinja: MiniJinjaState,
     pub lua: LuaState,
+    pub rhai: RhaiState,
 }
 
 impl ApateState {
     pub fn clear_cache(&self) {
         self.minijinja.clear();
-        // self.lua.clear();
     }
 }
 
@@ -196,16 +207,16 @@ impl ApateCounters {
 #[derive(Debug, Clone)]
 pub struct RequestContext {
     pub req: Rc<HttpRequest>,
-    pub body: Rc<Bytes>,
-    pub path: Rc<Path<String>>,
-    pub args_query: Rc<HashMap<String, String>>,
-    pub args_path: Rc<HashMap<String, String>>,
+    pub body: Arc<Bytes>,
+    pub path: Arc<Path<String>>,
+    pub args_query: Arc<HashMap<String, String>>,
+    pub args_path: Arc<HashMap<String, String>>,
 }
 
 impl RequestContext {
     pub fn update_paths(&mut self, path: Path<String>, args_path: HashMap<String, String>) {
-        self.path = Rc::new(path);
-        self.args_path = Rc::new(args_path);
+        self.path = Arc::new(path);
+        self.args_path = Arc::new(args_path);
     }
 }
 

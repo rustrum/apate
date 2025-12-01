@@ -6,14 +6,15 @@
 //!  - if matchers failed on deceit level, than next deceit will be handled
 //!  - if matchers failed on response level then next response will be handled
 //!  - if all matchers responses failed, than next deceit will be handled
-
 use jsonpath_rust::JsonPath as _;
 use mlua::Function;
+use rhai::{AST, Array, Engine, Scope};
 use serde::{Deserialize, Serialize};
 
 use crate::{
     RequestContext, ResourceRef,
     lua::{LuaRequestContext, LuaState},
+    rhai::{RhaiRequestContext, RhaiState},
 };
 
 /// Matchers process request data and return boolean result that affects [`crate::deceit::Deceit`] processing behavior.
@@ -59,6 +60,15 @@ pub enum Matcher {
         id: String,
         args: Vec<String>,
     },
+
+    Rhai {
+        script: String,
+    },
+
+    RhaiScript {
+        id: String,
+        args: Vec<String>,
+    },
 }
 
 pub fn is_matcher_approves(
@@ -66,6 +76,7 @@ pub fn is_matcher_approves(
     matcher: &Matcher,
     ctx: &RequestContext,
     lua: &LuaState,
+    rhai: &RhaiState,
 ) -> bool {
     match matcher {
         Matcher::QueryArg { name, value } => match_query_arg(name.as_str(), value.as_str(), ctx),
@@ -73,9 +84,13 @@ pub fn is_matcher_approves(
         Matcher::Method { eq } => match_method(eq.as_str(), ctx),
         Matcher::Header { key, value } => match_header(key.as_str(), value.as_str(), ctx),
         Matcher::Json { path, eq } => match_json(path.as_str(), eq.as_str(), ctx),
-        Matcher::Lua { script } => match_lua(rref, lua, script.as_str(), ctx.clone()),
+        Matcher::Lua { script } => match_lua(lua, rref, script.as_str(), ctx.clone()),
         Matcher::LuaScript { id, args } => {
-            match_lua_script(rref, lua, id.as_str(), ctx.clone(), args.clone())
+            match_lua_script(lua, rref, id.as_str(), ctx.clone(), args.clone())
+        }
+        Matcher::Rhai { script } => match_rhai(rhai, rref, script, ctx),
+        Matcher::RhaiScript { id, args } => {
+            match_rhai_script(rhai, rref, id.as_str(), ctx, args.clone())
         }
     }
 }
@@ -128,8 +143,8 @@ pub fn match_json(path: &str, value: &str, ctx: &RequestContext) -> bool {
 }
 
 pub fn match_lua_script(
-    rref: &ResourceRef,
     lua: &LuaState,
+    rref: &ResourceRef,
     script_id: &str,
     ctx: RequestContext,
     args: Vec<String>,
@@ -147,7 +162,7 @@ pub fn match_lua_script(
     call_lua_fn(lua_fn, ctx.into(), args)
 }
 
-pub fn match_lua(rref: &ResourceRef, lua: &LuaState, script: &str, ctx: RequestContext) -> bool {
+pub fn match_lua(lua: &LuaState, rref: &ResourceRef, script: &str, ctx: RequestContext) -> bool {
     let id = rref.to_resource_id("lua-matcher");
     let lua_fn = match lua.to_lua_function(id.clone(), script) {
         Ok(lfn) => lfn,
@@ -173,6 +188,60 @@ fn call_lua_fn(lua_fn: Function, ctx: LuaRequestContext, args: Vec<String>) -> b
         }
         Err(e) => {
             log::error!("Can't execute LUA matcher {e:?}");
+            false
+        }
+    }
+}
+
+pub fn match_rhai_script(
+    rhai: &RhaiState,
+    rref: &ResourceRef,
+    script_id: &str,
+    ctx: &RequestContext,
+    args: Vec<String>,
+) -> bool {
+    let (engine, ast) = match rhai.get_exec_global(script_id) {
+        Ok(lfn) => lfn,
+        Err(e) => {
+            log::error!(
+                "Can't load Rhai top level scrip by id:{script_id} path:{} {e:?}",
+                rref.as_string()
+            );
+            return false;
+        }
+    };
+
+    let args = args.into_iter().map(Into::into).collect();
+    call_rhai(&engine, &ast, ctx.clone().into(), args)
+}
+
+pub fn match_rhai(
+    rhai: &RhaiState,
+    rref: &ResourceRef,
+    script: &str,
+    ctx: &RequestContext,
+) -> bool {
+    let id = rref.to_resource_id("lua-matcher");
+
+    let (engine, ast) = match rhai.get_exec(id.clone(), script) {
+        Ok(a) => a,
+        Err(e) => {
+            log::error!("Can't load Rhai matcher by path:{} {e:?}", rref.as_string());
+            return false;
+        }
+    };
+    call_rhai(&engine, &ast, ctx.clone().into(), Array::new())
+}
+
+fn call_rhai(engine: &Engine, ast: &AST, ctx: RhaiRequestContext, args: Array) -> bool {
+    let mut scope = Scope::new();
+    scope.set_value("ctx", ctx);
+    scope.set_value("args", args);
+
+    match engine.eval_ast_with_scope::<bool>(&mut scope, ast) {
+        Ok(v) => v,
+        Err(e) => {
+            log::error!("Can't execute Rhai matcher {e:?}");
             false
         }
     }

@@ -1,0 +1,78 @@
+[[deceit]]
+uris = ["/rhai/match"]
+headers = [["Content-Type", "application/json"]]
+
+# This is an example of how to use RHAI script in matchers
+# if you need a complex matching rules against input
+[[deceit.matchers]]
+type = "rhai"
+script = """
+// All matchers has `ctx` variable with request context
+
+// There are some logging capabilities
+print(`CTX path is: ${ctx.path}`);
+// Debug output is also possible
+debug(`CTX path is: ${ctx.path}`);
+
+// load_* functions means that this operation is expensive
+let headers = ctx.load_headers();
+if "User-Agent" in headers {
+    let agent = headers.get("User-Agent");
+    print(`User-Agent is: ${agent}`);
+}
+
+let query_args = ctx.load_query_args();
+if "foo" in query_args {
+    print(`Query arg "foo" is: ${query_args.foo}`);
+}
+
+// You will not get a response if /rhai/match?foo=none
+if query_args.foo == "none" {
+    return false;
+}
+
+return true;
+"""
+
+[[deceit.responses]]
+output = """
+{"message": "Rhai inline matcher is OK"},
+"""
+
+[[deceit]]
+uris = ["/rhai/glob"]
+headers = [["Content-Type", "application/json"]]
+
+# This time we use global Rhai script definition (for reusability purpose)
+# You can address global script by ID in any matcher and provide some custom input for it
+[[deceit.matchers]]
+type = "rhai_script"
+id = "top-level-script"
+args = ["arg1", "arg2"]
+
+[[deceit.responses]]
+output = """
+{"message": "Rhai top level matcher is OK"},
+"""
+
+# This is our global Rhai scripts definitions
+[[rhai]]
+id = "top-level-script"
+script = """
+// Top level script has two global variables:
+// - ctx - with context (depending on script type)
+// - args - user defined args as a list of strings
+
+if args.is_empty() {
+    print("No args were provided");
+} else {
+    print(`Provided args: ${args}`);
+}
+
+// You will not get a response if /rhai/glob?foo=none
+if ctx.load_query_args().foo == "none" {
+    return false
+}
+
+return true
+"""

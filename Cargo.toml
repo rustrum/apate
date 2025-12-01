@@ -34,9 +34,10 @@ minijinja = { version = "2.12.0", features = ["loader", "json"] }
 mlua = { version = "0.11", features = [
     "lua54",
     "vendored",
-    "async", # maybe not needed
+    "async",    # maybe not needed
 ] }
 rand = "0.9"
+rhai = { version = "1.23", features = ["sync", "no_custom_syntax"] }
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
 serde_urlencoded = "0.7"

@@ -92,6 +92,7 @@ async fn specification_replace(
 
     state.clear_cache();
     state.lua.clear_and_update(specs.lua.clone());
+    state.rhai.clear_and_update(specs.rhai.clone());
 
     HttpResponse::Ok().body("Specification replaced".to_string())
 }
@@ -113,6 +114,7 @@ async fn specification_prepend(
 
     state.clear_cache();
     state.lua.clear_and_update(specs.lua.clone());
+    state.rhai.clear_and_update(specs.rhai.clone());
 
     HttpResponse::Ok().body("New specification prepended to the existing one".to_string())
 }
@@ -134,6 +136,7 @@ async fn specification_append(
 
     state.clear_cache();
     state.lua.clear_and_update(specs.lua.clone());
+    state.rhai.clear_and_update(specs.rhai.clone());
 
     HttpResponse::Ok().body("New specification appended to the existing one".to_string())
 }

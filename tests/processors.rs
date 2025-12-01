@@ -26,10 +26,10 @@ impl CustomProcessor {
 }
 
 impl PostProcessor for CustomProcessor {
-    fn process<'a>(
+    fn process(
         &self,
         input: &str,
-        _context: &DeceitResponseContext<'a>,
+        _context: &DeceitResponseContext,
         response: &[u8],
     ) -> Result<Option<Vec<u8>>, Box<dyn core::error::Error>> {
         self.counter.fetch_add(1, Ordering::SeqCst);

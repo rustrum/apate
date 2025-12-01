@@ -6,7 +6,7 @@ use std::{
 use mlua::{Function, Lua, UserData, UserDataMethods};
 use serde::{Deserialize, Serialize};
 
-use crate::RequestContext;
+use crate::{RequestContext, deceit::DeceitResponseContext};
 
 thread_local! {
     static LUA: Lua = build_lua_env();
@@ -113,6 +113,14 @@ impl LuaState {
     }
 }
 
+/// Passed as a first argument into lua matchers.
+///
+/// Provides access to [`RequestContext`] via next methods:
+///  - ctx:path()
+///  - ctx:method()
+///  - ctx:get_header(header_name)
+///  - ctx:get_query_arg(query_arg_name)
+///  - ctx:get_path_arg(query_arg_name)
 #[derive(Debug)]
 pub struct LuaRequestContext {
     ctx: RequestContext,
@@ -124,11 +132,16 @@ impl From<RequestContext> for LuaRequestContext {
     }
 }
 
-/// [`UserData`] does not work with "send" feature because [`RequestContext`] is not send.
+/// [`UserData`] does not work with mlua "send" feature because [`RequestContext`] is not send.
 impl UserData for LuaRequestContext {
     fn add_methods<M: UserDataMethods<Self>>(methods: &mut M) {
         methods.add_method("path", |_, this, ()| {
             let path = this.ctx.path.as_str().to_string();
+            Ok(path)
+        });
+
+        methods.add_method("method", |_, this, ()| {
+            let path = this.ctx.req.method().to_string();
             Ok(path)
         });
 
@@ -149,5 +162,22 @@ impl UserData for LuaRequestContext {
             };
             Ok(result)
         });
+    }
+}
+
+#[allow(unused)]
+pub struct LuaResponseContext {
+    ctx: DeceitResponseContext,
+}
+
+impl From<DeceitResponseContext> for LuaResponseContext {
+    fn from(ctx: DeceitResponseContext) -> Self {
+        Self { ctx }
+    }
+}
+
+impl UserData for LuaResponseContext {
+    fn add_methods<M: UserDataMethods<Self>>(_methods: &mut M) {
+        // TODO: add methods
     }
 }

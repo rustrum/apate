@@ -57,10 +57,10 @@ impl JsonSignerPostProcessor {
 }
 
 impl PostProcessor for JsonSignerPostProcessor {
-    fn process<'a>(
+    fn process(
         &self,
         input: &str,
-        _context: &apate::deceit::DeceitResponseContext<'a>,
+        _context: &apate::deceit::DeceitResponseContext,
         response: &[u8],
     ) -> Result<Option<Vec<u8>>, Box<dyn core::error::Error>> {
         // (o_O) Very stupid example how to use custom input

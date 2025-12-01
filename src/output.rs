@@ -1,6 +1,9 @@
 //! This module responsibility is to build HTTP response message body
 
-use std::sync::{Arc, atomic::Ordering};
+use std::{
+    collections::HashMap,
+    sync::{Arc, atomic::Ordering},
+};
 
 use base64::Engine as _;
 use minijinja::Environment;
@@ -23,6 +26,31 @@ pub enum OutputType {
     // #[serde(rename = "base64")]
     /// Handle output as binary data that will be decoded from Base64 string.
     Base64,
+}
+
+#[derive(Serialize)]
+struct MiniJinjaResponseContext<'a> {
+    pub path: &'a str,
+
+    pub headers: &'a HashMap<String, String>,
+
+    pub query_args: &'a HashMap<String, String>,
+
+    pub path_args: &'a HashMap<String, String>,
+
+    pub request_json: &'a Option<serde_json::Value>,
+}
+
+impl<'a> MiniJinjaResponseContext<'a> {
+    fn new(ctx: &'a DeceitResponseContext) -> Self {
+        Self {
+            path: ctx.path.as_str(),
+            headers: &ctx.headers,
+            query_args: &ctx.query_args,
+            path_args: &ctx.path_args,
+            request_json: &ctx.request_json,
+        }
+    }
 }
 
 /// Holds cached minijinja environment.
@@ -123,8 +151,9 @@ pub fn prepare_jinja_output(
     });
 
     let tpl = env.get_template(&tpl_id)?;
+    let jinja_ctx = MiniJinjaResponseContext::new(ctx);
     let response = tpl
-        .render(ctx)
+        .render(jinja_ctx)
         .map_err(|e| color_eyre::eyre::eyre!("Can't render minijinja template: {e}"))?;
 
     Ok(response.into_bytes())
