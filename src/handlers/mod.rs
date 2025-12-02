@@ -3,9 +3,6 @@
 #[cfg(feature = "server")]
 mod admin;
 
-use std::{collections::HashMap, rc::Rc, sync::Arc};
-
-use actix_router::Path;
 #[cfg(feature = "server")]
 pub use admin::{ADMIN_API, admin_service_config};
 
@@ -31,24 +28,10 @@ pub async fn apate_server_handler(
 async fn deceit_handler(req: HttpRequest, body: Bytes, state: Data<ApateState>) -> HttpResponse {
     let deceit = &state.specs.read().await.deceit;
 
-    let mut args_query: HashMap<String, String> = Default::default();
-    let qstring = req.uri().query().unwrap_or_default();
-    if let Ok(qargs) = serde_urlencoded::from_str::<HashMap<String, String>>(qstring) {
-        args_query = qargs;
-    } else {
-        log::error!("Can't decode query string from URL");
-    }
-
-    let mut ctx = RequestContext {
-        req: Rc::new(req),
-        body: Arc::new(body),
-        path: Arc::new(Path::new("/".to_string())),
-        args_query: Arc::new(args_query),
-        args_path: Arc::new(Default::default()),
-    };
+    let mut ctx = RequestContext::new(req, body);
 
     for (deceit_idx, d) in deceit.iter().enumerate() {
-        let Some(path) = d.match_againtst_uris(ctx.req.path()) else {
+        let Some(path) = d.match_againtst_uris(&ctx.request_path) else {
             continue;
         };
 
@@ -57,7 +40,7 @@ async fn deceit_handler(req: HttpRequest, body: Bytes, state: Data<ApateState>) 
             .map(|(k, v)| (k.to_string(), v.to_string()))
             .collect();
 
-        ctx.update_paths(path, args_path);
+        ctx.update_paths(path.as_str().to_string(), args_path);
 
         log::trace!("Request context is: {ctx:?}");
 
@@ -120,6 +103,6 @@ async fn deceit_handler(req: HttpRequest, body: Bytes, state: Data<ApateState>) 
 
     HttpResponse::NotFound().body(format!(
         "Nothing can handle your requiest with path: {}\n",
-        ctx.req.path()
+        ctx.request_path
     ))
 }

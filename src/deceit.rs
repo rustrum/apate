@@ -109,9 +109,9 @@ impl Deceit {
 /// Context for output renderers and pre/post processors as well.
 #[derive(Clone)]
 pub struct DeceitResponseContext {
-    pub path: String,
+    pub path: Arc<String>,
 
-    pub headers: Rc<HashMap<String, String>>,
+    pub headers: Arc<HashMap<String, String>>,
 
     pub query_args: Arc<HashMap<String, String>>,
 
@@ -180,11 +180,6 @@ pub fn create_responce_context(
     cnt: ApateCounters,
     minijinja: MiniJinjaState,
 ) -> color_eyre::Result<DeceitResponseContext> {
-    let mut headers = HashMap::new();
-    for (k, v) in ctx.req.headers().iter() {
-        headers.insert(k.to_string(), v.to_str()?.to_string());
-    }
-
     let request_json = if deceit.json_request && !ctx.body.trim_ascii().is_empty() {
         let body = String::from_utf8_lossy(&ctx.body);
         Some(serde_json::from_slice::<serde_json::Value>(
@@ -195,8 +190,8 @@ pub fn create_responce_context(
     };
 
     Ok(DeceitResponseContext {
-        path: ctx.req.path().to_string(),
-        headers: Rc::new(headers),
+        path: ctx.request_path.clone(),
+        headers: ctx.headers.clone(),
         query_args: ctx.args_query.clone(),
         path_args: ctx.args_path.clone(),
         request_json: Rc::new(request_json),

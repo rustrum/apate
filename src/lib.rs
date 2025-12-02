@@ -12,11 +12,9 @@ use deceit::Deceit;
 use std::collections::HashMap;
 use std::io::Read as _;
 use std::net::Ipv4Addr;
-use std::rc::Rc;
 use std::sync::Arc;
 use std::sync::atomic::AtomicU64;
 
-use actix_router::Path;
 use actix_web::App;
 use actix_web::dev::Server;
 use actix_web::middleware::Logger;
@@ -206,15 +204,54 @@ impl ApateCounters {
 
 #[derive(Debug, Clone)]
 pub struct RequestContext {
-    pub req: Rc<HttpRequest>,
+    /// Maybe I even do not need to store it during request anymore
+    // req: Rc<HttpRequest>,
     pub body: Arc<Bytes>,
-    pub path: Arc<Path<String>>,
+    pub method: String,
+    pub request_path: Arc<String>,
+    pub headers: Arc<HashMap<String, String>>,
+    pub path: Arc<String>,
     pub args_query: Arc<HashMap<String, String>>,
     pub args_path: Arc<HashMap<String, String>>,
 }
 
 impl RequestContext {
-    pub fn update_paths(&mut self, path: Path<String>, args_path: HashMap<String, String>) {
+    pub fn new(req: HttpRequest, body: Bytes) -> Self {
+        let method = req.method().to_string();
+        let headers = req
+            .headers()
+            .iter()
+            .filter_map(|(k, v)| match v.to_str().map(|v| v.to_string()) {
+                Ok(value) => Some((k.to_string(), value)),
+                Err(e) => {
+                    log::warn!("Can't convert header value to string by key: {k} {e}");
+                    None
+                }
+            })
+            .collect();
+
+        let mut args_query: HashMap<String, String> = Default::default();
+        let qstring = req.uri().query().unwrap_or_default();
+        if let Ok(qargs) = serde_urlencoded::from_str::<HashMap<String, String>>(qstring) {
+            args_query = qargs;
+        } else {
+            log::error!("Can't decode query string from URL");
+        }
+        let request_path = Arc::new(req.path().to_string());
+        // let req = Rc::new(req);
+        Self {
+            // req,
+            body: Arc::new(body),
+            method,
+            request_path,
+            headers: Arc::new(headers),
+            args_query: Arc::new(args_query),
+            path: Arc::new("/".to_string()),
+            args_path: Arc::new(Default::default()),
+        }
+    }
+
+    pub fn update_paths(&mut self, path: String, args_path: HashMap<String, String>) {
         self.path = Arc::new(path);
         self.args_path = Arc::new(args_path);
     }

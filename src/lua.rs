@@ -141,7 +141,7 @@ impl UserData for LuaRequestContext {
         });
 
         methods.add_method("method", |_, this, ()| {
-            let path = this.ctx.req.method().to_string();
+            let path = this.ctx.method.clone();
             Ok(path)
         });
 
@@ -154,13 +154,7 @@ impl UserData for LuaRequestContext {
         });
 
         methods.add_method("get_header", |_, this, key: String| {
-            let result = if let Some(header) = this.ctx.req.headers().get(&key) {
-                let mapped = header.to_str().map_err(mlua::Error::external)?.to_string();
-                Some(mapped)
-            } else {
-                None
-            };
-            Ok(result)
+            Ok(this.ctx.headers.get(&key).cloned())
         });
     }
 }

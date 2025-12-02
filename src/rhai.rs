@@ -100,7 +100,7 @@ impl RhaiState {
 
 #[derive(Debug, Clone)]
 pub struct RhaiRequestContext {
-    pub method: Arc<String>,
+    pub method: String,
     pub headers: RhaiMap,
     pub body: Arc<Bytes>,
     pub path: Arc<String>,
@@ -110,7 +110,7 @@ pub struct RhaiRequestContext {
 
 impl RhaiRequestContext {
     pub fn get_method(&mut self) -> String {
-        self.method.as_ref().clone()
+        self.method.clone()
     }
 
     pub fn get_path(&mut self) -> String {
@@ -139,21 +139,14 @@ impl RhaiRequestContext {
 impl From<RequestContext> for RhaiRequestContext {
     fn from(ctx: RequestContext) -> Self {
         let headers = ctx
-            .req
-            .headers()
+            .headers
             .iter()
-            .map(|(k, v)| {
-                (
-                    k.as_str().to_string().into(),
-                    v.to_str().unwrap_or("UNDEFINED").to_string().into(),
-                )
-            })
+            .map(|(k, v)| (k.into(), v.into()))
             .collect();
 
-        let method = Arc::new(ctx.req.method().as_str().to_string());
         let path = Arc::new(ctx.path.as_str().to_string());
         Self {
-            method,
+            method: ctx.method.clone(),
             headers,
             body: ctx.body.clone(),
             path,

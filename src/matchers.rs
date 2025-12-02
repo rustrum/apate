@@ -110,16 +110,14 @@ pub fn match_query_arg(name: &str, value: &str, ctx: &RequestContext) -> bool {
 }
 
 pub fn match_method(method: &str, ctx: &RequestContext) -> bool {
-    method
-        .to_uppercase()
-        .contains(&ctx.req.method().to_string())
+    method.to_uppercase().contains(&ctx.method)
 }
 
 pub fn match_header(key: &str, value: &str, ctx: &RequestContext) -> bool {
-    let Some(header_value) = ctx.req.headers().get(key) else {
+    let Some(header_value) = ctx.headers.get(key) else {
         return false;
     };
-    header_value.to_str().is_ok_and(|v| v == value)
+    header_value.as_str() == value
 }
 
 pub fn match_json(path: &str, value: &str, ctx: &RequestContext) -> bool {
