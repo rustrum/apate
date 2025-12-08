@@ -85,6 +85,7 @@ async fn deceit_handler(req: HttpRequest, body: Bytes, state: Data<ApateState>) 
                     &drctx,
                     &body,
                     &state.lua,
+                    &state.rhai,
                 ) {
                     Ok(new_body) => {
                         if let Some(bts) = new_body {

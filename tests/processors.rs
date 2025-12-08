@@ -28,20 +28,20 @@ impl CustomProcessor {
 impl PostProcessor for CustomProcessor {
     fn process(
         &self,
-        input: &str,
+        input: &[&str],
         _context: &DeceitResponseContext,
         response: &[u8],
     ) -> Result<Option<Vec<u8>>, Box<dyn core::error::Error>> {
         self.counter.fetch_add(1, Ordering::SeqCst);
 
-        if input.trim().is_empty() {
+        if input.is_empty() {
             return Ok(None);
         }
 
         let mut out = Vec::new();
 
         out.extend(response);
-        out.extend(input.as_bytes());
+        out.extend(input[0].as_bytes());
 
         Ok(Some(out))
     }
@@ -59,9 +59,9 @@ fn test_custom_user_processor() {
         ))
         .add_deceit(
             DeceitBuilder::with_uris(&["/processor/run"])
-                .add_processor(Processor::Custom {
+                .add_processor(Processor::Embedded {
                     id: "processor_id_1".to_string(),
-                    input: Default::default(),
+                    args: Default::default(),
                 })
                 .add_response(
                     DeceitResponseBuilder::default()
@@ -72,9 +72,9 @@ fn test_custom_user_processor() {
         )
         .add_deceit(
             DeceitBuilder::with_uris(&["/processor/append"])
-                .add_processor(Processor::Custom {
+                .add_processor(Processor::Embedded {
                     id: "processor_id_1".to_string(),
-                    input: "_TAIL".to_string(),
+                    args: vec!["_TAIL".to_string()],
                 })
                 .add_response(
                     DeceitResponseBuilder::default()

@@ -1,20 +1,22 @@
 use std::{collections::HashMap, fmt::Debug};
 
-use color_eyre::eyre::eyre;
+use color_eyre::eyre::{bail, eyre};
 use mlua::Function;
+use rhai::{AST, Array, Blob, Dynamic, Engine, Scope};
 use serde::{Deserialize, Serialize};
 
 use crate::{
     ResourceRef,
     deceit::DeceitResponseContext,
     lua::{LuaResponseContext, LuaState},
+    rhai::{RhaiResponseContext, RhaiState},
 };
 
 /// Trait for custom user-defined logic to run after output response is prepared (rendered).
 pub trait PostProcessor: Sync + Send {
     fn process(
         &self,
-        input: &str,
+        input: &[&str],
         context: &DeceitResponseContext,
         response: &[u8],
     ) -> Result<Option<Vec<u8>>, Box<dyn core::error::Error>>;
@@ -31,14 +33,22 @@ pub enum Processor {
         id: String,
         args: Vec<String>,
     },
-    /// References to custom user processor.
-    Custom {
+
+    Rhai {
+        script: String,
+    },
+    RhaiRef {
+        id: String,
+        args: Vec<String>,
+    },
+    /// References to custom embedded rust user processor.
+    Embedded {
         /// Processor with this ID should be added on server initialization.
         id: String,
 
         /// Custom user input understandable only by processor logic.
         #[serde(default)]
-        input: String,
+        args: Vec<String>,
     },
 }
 
@@ -64,7 +74,7 @@ impl ApateProcessor {
 
     pub fn apply_post(
         &self,
-        input: &str,
+        input: &[&str],
         rctx: &DeceitResponseContext,
         body: &[u8],
     ) -> color_eyre::Result<Option<Vec<u8>>> {
@@ -89,6 +99,7 @@ pub(crate) fn apply_processors(
     rctx: &DeceitResponseContext,
     body: &[u8],
     lua: &LuaState,
+    rhai: &RhaiState,
 ) -> color_eyre::Result<Option<Vec<u8>>> {
     let mut result: Option<Vec<u8>> = None;
 
@@ -102,11 +113,12 @@ pub(crate) fn apply_processors(
         let processor_ref = rref.with_level(pid);
 
         match p {
-            Processor::Custom { id, input } => {
+            Processor::Embedded { id, args: input } => {
                 let Some(p) = custom_registry.get(id.as_str()) else {
                     color_eyre::eyre::bail!("Can't get processor by id \"{id}\"");
                 };
-                if let Some(new_body) = p.apply_post(input.as_str(), rctx, input_bytes)? {
+                let args: Vec<&str> = input.iter().map(AsRef::as_ref).collect();
+                if let Some(new_body) = p.apply_post(&args, rctx, input_bytes)? {
                     result = Some(new_body);
                 }
             }
@@ -129,10 +141,93 @@ pub(crate) fn apply_processors(
                     result = Some(new_body)
                 }
             }
+            Processor::Rhai { script } => {
+                if let Some(new_body) = apply_rhai_processor(
+                    rhai,
+                    processor_ref,
+                    script.as_str(),
+                    rctx.clone(),
+                    input_bytes,
+                )? {
+                    result = Some(new_body)
+                }
+            }
+            Processor::RhaiRef { id, args } => {
+                if let Some(new_body) = apply_rhai_processor_ref(
+                    rhai,
+                    processor_ref,
+                    id.as_str(),
+                    args.clone(),
+                    rctx.clone(),
+                    input_bytes,
+                )? {
+                    result = Some(new_body)
+                }
+            }
         }
     }
 
     Ok(result)
+}
+
+pub(crate) fn apply_rhai_processor(
+    rhai: &RhaiState,
+    rref: ResourceRef,
+    script: &str,
+    rctx: DeceitResponseContext,
+    body: &[u8],
+) -> color_eyre::Result<Option<Vec<u8>>> {
+    let id = rref.to_resource_id("rhai-processor");
+
+    let (engine, ast) = rhai
+        .get_exec(id.clone(), script)
+        .map_err(|e| eyre!("Can't load Rhai matcher by path:{rref} {e:?}"))?;
+
+    call_rhai(&engine, &ast, rctx.into(), Array::new(), body)
+}
+
+pub(crate) fn apply_rhai_processor_ref(
+    rhai: &RhaiState,
+    rref: ResourceRef,
+    script_id: &str,
+    args: Vec<String>,
+    rctx: DeceitResponseContext,
+    body: &[u8],
+) -> color_eyre::Result<Option<Vec<u8>>> {
+    let (engine, ast) = rhai.get_exec_global(script_id).map_err(|e| {
+        eyre!("Can't load Rhai top level scrip by id:{script_id} path:{rref} {e:?}")
+    })?;
+
+    let args = args.into_iter().map(Into::into).collect();
+    call_rhai(&engine, &ast, rctx.into(), args, body)
+}
+
+fn call_rhai(
+    engine: &Engine,
+    ast: &AST,
+    ctx: RhaiResponseContext,
+    args: Array,
+    body: &[u8],
+) -> color_eyre::Result<Option<Vec<u8>>> {
+    let mut scope = Scope::new();
+    scope.set_value("ctx", ctx);
+    scope.set_value("args", args);
+    scope.set_value("body", Blob::from(body));
+
+    let result = engine.eval_ast_with_scope::<Dynamic>(&mut scope, ast)?;
+
+    let value = if result.is_unit() {
+        None
+    } else if result.is_blob() {
+        let blob = result
+            .try_cast_result::<Blob>()
+            .map_err(|e| eyre!("Must not happen here {e:?}"))?;
+        Some(blob)
+    } else {
+        bail!("Wrong Rhai processor return type: {}", result.type_name());
+    };
+
+    Ok(value)
 }
 
 pub(crate) fn apply_lua_processor(

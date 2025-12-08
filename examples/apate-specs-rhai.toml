@@ -40,20 +40,56 @@ output = """
 """
 
 [[deceit]]
-uris = ["/rhai/glob"]
+uris = ["/rhai/match/ref"]
 headers = [["Content-Type", "application/json"]]
 
 # This time we use global Rhai script definition (for reusability purpose)
 # You can address global script by ID in any matcher and provide some custom input for it
 [[deceit.matchers]]
-type = "rhai_script"
+type = "rhai_ref"
 id = "top-level-script"
 args = ["arg1", "arg2"]
 
 [[deceit.responses]]
 output = """
-{"message": "Rhai top level matcher is OK"},
+{"message": "Rhai top level matcher is OK"}
 """
+
+
+[[deceit]]
+uris = ["/rhai/post"]
+headers = [["Content-Type", "application/json"]]
+
+# This time we use global Rhai script definition (for reusability purpose)
+# You can address global script by ID in any matcher and provide some custom input for it
+[[deceit.processors]]
+type = "rhai"
+script = """
+// Rhai processor has next context variables:
+// - ctx - with response context
+// - args - with custom arguments if any
+// - body - with response body as bytes (blob)
+
+let json_map = parse_json(body.as_string());
+json_map.post = "hello from script post processor";
+
+return json_map.to_json().to_blob();
+"""
+
+# This post processor will run after a previous one
+# and will use body returned by it
+[[deceit.processors]]
+type = "rhai_ref"
+id = "rhai-post-processor"
+args = ["argumen1", "argument2"]
+
+
+[[deceit.responses]]
+type = "text"
+output = """
+{"message": "Rhai post processor is working"}
+"""
+
 
 # This is our global Rhai scripts definitions
 [[rhai]]
@@ -76,3 +112,23 @@ if ctx.load_query_args().foo == "none" {
 
 return true
 """
+
+
+[[rhai]]
+id = "rhai-post-processor"
+script = """
+// Rhai processor has next context variables:
+// - ctx - with response context
+// - args - with custom arguments if any
+// - body - with response body as bytes (blob)
+
+let json_map = parse_json(body.as_string());
+
+let fields_count = json_map.len();
+
+json_map.post_ref = `Map len() returned ${fields_count}`;
+json_map.args = args;
+
+return json_map.to_json().to_blob();
+"""
+

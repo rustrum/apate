@@ -32,11 +32,11 @@ async fn main() -> io::Result<()> {
                         .build(),
                 )
                 // Now we referencing custom processor from registry by id "signer"
-                .add_processor(Processor::Custom {
+                .add_processor(Processor::Embedded {
                     id: "signer".to_string(),
                     // Custom processor could have some user defined input for each scope.
                     // In TOML you could skip it - it will be defined as an empty string.
-                    input: "abcd".to_string(),
+                    args: vec!["abcd".to_string()],
                 })
                 .build(),
         )
@@ -59,12 +59,12 @@ impl JsonSignerPostProcessor {
 impl PostProcessor for JsonSignerPostProcessor {
     fn process(
         &self,
-        input: &str,
+        input: &[&str],
         _context: &apate::deceit::DeceitResponseContext,
         response: &[u8],
     ) -> Result<Option<Vec<u8>>, Box<dyn core::error::Error>> {
         // (o_O) Very stupid example how to use custom input
-        let seed = input.len();
+        let seed: usize = input.iter().map(|v| v.len()).sum();
 
         // Response body generated from output is passed as bytes
         // it is not always a string, binary response is also supported.

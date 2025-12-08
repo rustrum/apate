@@ -10,6 +10,7 @@ pub mod test;
 use deceit::Deceit;
 
 use std::collections::HashMap;
+use std::fmt::Display;
 use std::io::Read as _;
 use std::net::Ipv4Addr;
 use std::sync::Arc;
@@ -211,8 +212,8 @@ pub struct RequestContext {
     pub request_path: Arc<String>,
     pub headers: Arc<HashMap<String, String>>,
     pub path: Arc<String>,
-    pub args_query: Arc<HashMap<String, String>>,
-    pub args_path: Arc<HashMap<String, String>>,
+    pub query_args: Arc<HashMap<String, String>>,
+    pub path_args: Arc<HashMap<String, String>>,
 }
 
 impl RequestContext {
@@ -245,15 +246,15 @@ impl RequestContext {
             method,
             request_path,
             headers: Arc::new(headers),
-            args_query: Arc::new(args_query),
+            query_args: Arc::new(args_query),
             path: Arc::new("/".to_string()),
-            args_path: Arc::new(Default::default()),
+            path_args: Arc::new(Default::default()),
         }
     }
 
     pub fn update_paths(&mut self, path: String, args_path: HashMap<String, String>) {
         self.path = Arc::new(path);
-        self.args_path = Arc::new(args_path);
+        self.path_args = Arc::new(args_path);
     }
 }
 
@@ -364,7 +365,7 @@ impl ResourceRef {
         next
     }
 
-    pub fn as_string(&self) -> String {
+    fn as_string(&self) -> String {
         self.ids
             .iter()
             .map(|id| id.to_string())
@@ -374,6 +375,12 @@ impl ResourceRef {
 
     pub fn to_resource_id(&self, resource_type: &str) -> String {
         format!("{resource_type}:{}", self.as_string())
+    }
+}
+
+impl Display for ResourceRef {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}", self.as_string())
     }
 }
 

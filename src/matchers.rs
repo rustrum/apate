@@ -65,7 +65,7 @@ pub enum Matcher {
         script: String,
     },
 
-    RhaiScript {
+    RhaiRef {
         id: String,
         args: Vec<String>,
     },
@@ -86,24 +86,22 @@ pub fn is_matcher_approves(
         Matcher::Json { path, eq } => match_json(path.as_str(), eq.as_str(), ctx),
         Matcher::Lua { script } => match_lua(lua, rref, script.as_str(), ctx.clone()),
         Matcher::LuaScript { id, args } => {
-            match_lua_script(lua, rref, id.as_str(), ctx.clone(), args.clone())
+            match_lua_ref(lua, rref, id.as_str(), ctx.clone(), args.clone())
         }
         Matcher::Rhai { script } => match_rhai(rhai, rref, script, ctx),
-        Matcher::RhaiScript { id, args } => {
-            match_rhai_script(rhai, rref, id.as_str(), ctx, args.clone())
-        }
+        Matcher::RhaiRef { id, args } => match_rhai_ref(rhai, rref, id.as_str(), ctx, args.clone()),
     }
 }
 
 pub fn match_path_arg(name: &str, value: &str, ctx: &RequestContext) -> bool {
-    let Some(qvalue) = ctx.args_path.get(name) else {
+    let Some(qvalue) = ctx.path_args.get(name) else {
         return false;
     };
     value == *qvalue
 }
 
 pub fn match_query_arg(name: &str, value: &str, ctx: &RequestContext) -> bool {
-    let Some(qvalue) = ctx.args_query.get(name) else {
+    let Some(qvalue) = ctx.query_args.get(name) else {
         return false;
     };
     value == qvalue.as_str()
@@ -140,7 +138,7 @@ pub fn match_json(path: &str, value: &str, ctx: &RequestContext) -> bool {
     })
 }
 
-pub fn match_lua_script(
+pub fn match_lua_ref(
     lua: &LuaState,
     rref: &ResourceRef,
     script_id: &str,
@@ -150,10 +148,7 @@ pub fn match_lua_script(
     let lua_fn = match lua.get_lua_script(script_id) {
         Ok(lfn) => lfn,
         Err(e) => {
-            log::error!(
-                "Can't load LUA top level scrip by id:{script_id} path:{} {e:?}",
-                rref.as_string()
-            );
+            log::error!("Can't load LUA top level scrip by id:{script_id} path:{rref} {e:?}");
             return false;
         }
     };
@@ -165,7 +160,7 @@ pub fn match_lua(lua: &LuaState, rref: &ResourceRef, script: &str, ctx: RequestC
     let lua_fn = match lua.to_lua_function(id.clone(), script) {
         Ok(lfn) => lfn,
         Err(e) => {
-            log::error!("Can't load LUA matcher by path:{} {e:?}", rref.as_string());
+            log::error!("Can't load LUA matcher by path:{rref} {e:?}");
             return false;
         }
     };
@@ -191,7 +186,7 @@ fn call_lua_fn(lua_fn: Function, ctx: LuaRequestContext, args: Vec<String>) -> b
     }
 }
 
-pub fn match_rhai_script(
+pub fn match_rhai_ref(
     rhai: &RhaiState,
     rref: &ResourceRef,
     script_id: &str,
@@ -201,10 +196,7 @@ pub fn match_rhai_script(
     let (engine, ast) = match rhai.get_exec_global(script_id) {
         Ok(lfn) => lfn,
         Err(e) => {
-            log::error!(
-                "Can't load Rhai top level scrip by id:{script_id} path:{} {e:?}",
-                rref.as_string()
-            );
+            log::error!("Can't load Rhai top level scrip by id:{script_id} path:{rref} {e:?}");
             return false;
         }
     };
@@ -224,7 +216,7 @@ pub fn match_rhai(
     let (engine, ast) = match rhai.get_exec(id.clone(), script) {
         Ok(a) => a,
         Err(e) => {
-            log::error!("Can't load Rhai matcher by path:{} {e:?}", rref.as_string());
+            log::error!("Can't load Rhai matcher by path:{rref} {e:?}");
             return false;
         }
     };

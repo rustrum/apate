@@ -18,6 +18,14 @@ Project named after Apate - the goddess and personification of deceit.
 Yes it is!
 Only small changes and new features planned for future stable release v0.1.0.
 
+## Features
+
+ - Mocking any string based response
+ - Binary response support
+ - Jinja template language for customizing responses
+ - Rhai scripting for advanced scenarios
+ - Custom builds with custom rust extensions
+
 
 ## Running Apate server
 

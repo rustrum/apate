@@ -7,7 +7,7 @@ use actix_web::web::Bytes;
 use rhai::{AST, Engine, Map as RhaiMap, ParseError, ParseErrorType, Position};
 use serde::{Deserialize, Serialize};
 
-use crate::RequestContext;
+use crate::{RequestContext, deceit::DeceitResponseContext};
 
 /// Thai script specification that can be used as a matcher or processor.
 #[derive(Clone, Debug, Default, Deserialize, Serialize)]
@@ -101,7 +101,7 @@ impl RhaiState {
 #[derive(Debug, Clone)]
 pub struct RhaiRequestContext {
     pub method: String,
-    pub headers: RhaiMap,
+    pub headers: Arc<HashMap<String, String>>,
     pub body: Arc<Bytes>,
     pub path: Arc<String>,
     pub args_query: Arc<HashMap<String, String>>,
@@ -118,7 +118,10 @@ impl RhaiRequestContext {
     }
 
     pub fn load_headers(&mut self) -> RhaiMap {
-        self.headers.clone()
+        self.headers
+            .iter()
+            .map(|(k, v)| (k.into(), v.into()))
+            .collect()
     }
 
     pub fn load_path_args(&mut self) -> RhaiMap {
@@ -138,21 +141,56 @@ impl RhaiRequestContext {
 
 impl From<RequestContext> for RhaiRequestContext {
     fn from(ctx: RequestContext) -> Self {
-        let headers = ctx
-            .headers
-            .iter()
-            .map(|(k, v)| (k.into(), v.into()))
-            .collect();
-
         let path = Arc::new(ctx.path.as_str().to_string());
         Self {
             method: ctx.method.clone(),
-            headers,
+            headers: ctx.headers.clone(),
             body: ctx.body.clone(),
             path,
-            args_query: ctx.args_query.clone(),
-            args_path: ctx.args_path.clone(),
+            args_query: ctx.query_args.clone(),
+            args_path: ctx.path_args.clone(),
         }
+    }
+}
+
+#[derive(Clone)]
+pub struct RhaiResponseContext {
+    ctx: DeceitResponseContext,
+}
+
+impl From<DeceitResponseContext> for RhaiResponseContext {
+    fn from(ctx: DeceitResponseContext) -> Self {
+        Self { ctx }
+    }
+}
+
+impl RhaiResponseContext {
+    pub fn get_path(&mut self) -> String {
+        self.ctx.path.to_string()
+    }
+
+    pub fn load_headers(&mut self) -> RhaiMap {
+        self.ctx
+            .headers
+            .iter()
+            .map(|(k, v)| (k.into(), v.into()))
+            .collect()
+    }
+
+    pub fn load_path_args(&mut self) -> RhaiMap {
+        self.ctx
+            .path_args
+            .iter()
+            .map(|(k, v)| (k.into(), v.into()))
+            .collect()
+    }
+
+    pub fn load_query_args(&mut self) -> RhaiMap {
+        self.ctx
+            .query_args
+            .iter()
+            .map(|(k, v)| (k.into(), v.into()))
+            .collect()
     }
 }
 
@@ -174,6 +212,13 @@ fn build_rhai_engine() -> Engine {
         .register_fn("load_headers", RhaiRequestContext::load_headers)
         .register_fn("load_query_args", RhaiRequestContext::load_query_args)
         .register_fn("load_path_args", RhaiRequestContext::load_path_args);
+
+    engine
+        .register_type::<RhaiResponseContext>()
+        .register_get("path", RhaiResponseContext::get_path)
+        .register_fn("load_headers", RhaiResponseContext::load_headers)
+        .register_fn("load_query_args", RhaiResponseContext::load_query_args)
+        .register_fn("load_path_args", RhaiResponseContext::load_path_args);
 
     engine
 }

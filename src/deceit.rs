@@ -3,7 +3,6 @@
 
 use std::{
     collections::HashMap,
-    rc::Rc,
     sync::{
         Arc,
         atomic::{AtomicU16, Ordering},
@@ -117,12 +116,13 @@ pub struct DeceitResponseContext {
 
     pub path_args: Arc<HashMap<String, String>>,
 
-    pub request_json: Rc<Option<serde_json::Value>>,
+    pub request_json: Arc<Option<serde_json::Value>>,
 
     pub response_code: Arc<AtomicU16>,
 
     pub counters: ApateCounters,
 
+    // TODO maybe should remove minijinja state from response context
     pub minijinja: MiniJinjaState,
 }
 
@@ -192,9 +192,9 @@ pub fn create_responce_context(
     Ok(DeceitResponseContext {
         path: ctx.request_path.clone(),
         headers: ctx.headers.clone(),
-        query_args: ctx.args_query.clone(),
-        path_args: ctx.args_path.clone(),
-        request_json: Rc::new(request_json),
+        query_args: ctx.query_args.clone(),
+        path_args: ctx.path_args.clone(),
+        request_json: Arc::new(request_json),
         response_code: Arc::new(AtomicU16::new(0)),
         counters: cnt,
         minijinja,

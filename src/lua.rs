@@ -146,11 +146,11 @@ impl UserData for LuaRequestContext {
         });
 
         methods.add_method("get_query_arg", |_, this, key: String| {
-            Ok(this.ctx.args_query.get(&key).cloned())
+            Ok(this.ctx.query_args.get(&key).cloned())
         });
 
         methods.add_method("get_path_arg", |_, this, key: String| {
-            Ok(this.ctx.args_path.get(&key).cloned())
+            Ok(this.ctx.path_args.get(&key).cloned())
         });
 
         methods.add_method("get_header", |_, this, key: String| {

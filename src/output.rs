@@ -18,7 +18,10 @@ use crate::deceit::DeceitResponseContext;
 #[derive(Default, Copy, Clone, Debug, Deserialize, Serialize)]
 #[serde(rename_all = "snake_case")]
 pub enum OutputType {
-    /// Handle output as minijinja template
+    /// Output represented as a plain text.
+    /// TODO: Make text default output type ?
+    Text,
+    /// Handle output as minijinja template.
     #[default]
     Jinja,
     /// Handle output as binary data that will be decoded from HEX string (no 0x prefix expected).
@@ -109,6 +112,7 @@ pub fn build_response_body(
     ctx: &DeceitResponseContext,
 ) -> color_eyre::Result<Vec<u8>> {
     match tp {
+        OutputType::Text => Ok(output.as_bytes().to_vec()),
         OutputType::Jinja => prepare_jinja_output(output, ctx),
         OutputType::Hex => {
             let hex_str = output.trim().strip_prefix("0x").unwrap_or(output).trim();
