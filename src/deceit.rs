@@ -16,7 +16,6 @@ use serde::{Deserialize, Serialize};
 
 use crate::{
     ApateConfig, ApateCounters, RequestContext, ResourceRef,
-    lua::LuaState,
     matchers::{Matcher, is_matcher_approves},
     output::{MiniJinjaState, OutputType},
     processors::Processor,
@@ -75,13 +74,12 @@ impl Deceit {
         &self,
         rref: &ResourceRef,
         ctx: &RequestContext,
-        lua: &LuaState,
         rhai: &RhaiState,
     ) -> Option<usize> {
         // Top level matchers
         for (mid, matcher) in self.matchers.iter().enumerate() {
             let matcher_ref = rref.with_level(mid);
-            if !is_matcher_approves(&matcher_ref, matcher, ctx, lua, rhai) {
+            if !is_matcher_approves(&matcher_ref, matcher, ctx, rhai) {
                 return None;
             }
         }
@@ -95,7 +93,7 @@ impl Deceit {
             let deceit_ref = rref.with_level(idx);
             for (mid, matcher) in dr.matchers.iter().enumerate() {
                 let matcher_ref = deceit_ref.with_level(mid);
-                if is_matcher_approves(&matcher_ref, matcher, ctx, lua, rhai) {
+                if is_matcher_approves(&matcher_ref, matcher, ctx, rhai) {
                     return Some(idx);
                 }
             }

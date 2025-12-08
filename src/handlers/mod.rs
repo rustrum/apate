@@ -45,7 +45,7 @@ async fn deceit_handler(req: HttpRequest, body: Bytes, state: Data<ApateState>) 
         log::trace!("Request context is: {ctx:?}");
 
         let deceit_ref = ResourceRef::new(deceit_idx);
-        let Some(idx) = d.match_response(&deceit_ref, &ctx, &state.lua, &state.rhai) else {
+        let Some(idx) = d.match_response(&deceit_ref, &ctx, &state.rhai) else {
             continue;
         };
 
@@ -84,7 +84,6 @@ async fn deceit_handler(req: HttpRequest, body: Bytes, state: Data<ApateState>) 
                     &prcs,
                     &drctx,
                     &body,
-                    &state.lua,
                     &state.rhai,
                 ) {
                     Ok(new_body) => {

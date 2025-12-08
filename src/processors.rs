@@ -1,14 +1,12 @@
 use std::{collections::HashMap, fmt::Debug};
 
 use color_eyre::eyre::{bail, eyre};
-use mlua::Function;
 use rhai::{AST, Array, Blob, Dynamic, Engine, Scope};
 use serde::{Deserialize, Serialize};
 
 use crate::{
     ResourceRef,
     deceit::DeceitResponseContext,
-    lua::{LuaResponseContext, LuaState},
     rhai::{RhaiResponseContext, RhaiState},
 };
 
@@ -26,14 +24,6 @@ pub trait PostProcessor: Sync + Send {
 #[derive(Clone, Debug, Deserialize, Serialize)]
 #[serde(tag = "type", rename_all = "snake_case")]
 pub enum Processor {
-    Lua {
-        script: String,
-    },
-    LuaScript {
-        id: String,
-        args: Vec<String>,
-    },
-
     Rhai {
         script: String,
     },
@@ -51,12 +41,6 @@ pub enum Processor {
         args: Vec<String>,
     },
 }
-
-// #[derive(Clone, Debug, Deserialize, Serialize)]
-// pub enum ProcessorScope {
-//     Pre,
-//     Post,
-// }
 
 pub struct ApateProcessor {
     pub id: String,
@@ -98,7 +82,6 @@ pub(crate) fn apply_processors(
     processors: &[&Processor],
     rctx: &DeceitResponseContext,
     body: &[u8],
-    lua: &LuaState,
     rhai: &RhaiState,
 ) -> color_eyre::Result<Option<Vec<u8>>> {
     let mut result: Option<Vec<u8>> = None;
@@ -122,27 +105,8 @@ pub(crate) fn apply_processors(
                     result = Some(new_body);
                 }
             }
-            Processor::Lua { script } => {
-                if let Some(new_body) =
-                    apply_lua_processor(lua, processor_ref, script.as_str(), rctx.clone(), body)?
-                {
-                    result = Some(new_body)
-                }
-            }
-            Processor::LuaScript { id, args } => {
-                if let Some(new_body) = apply_lua_processor_script(
-                    lua,
-                    processor_ref,
-                    id.as_str(),
-                    args.clone(),
-                    rctx.clone(),
-                    body,
-                )? {
-                    result = Some(new_body)
-                }
-            }
             Processor::Rhai { script } => {
-                if let Some(new_body) = apply_rhai_processor(
+                if let Some(new_body) = apply_rhai(
                     rhai,
                     processor_ref,
                     script.as_str(),
@@ -153,7 +117,7 @@ pub(crate) fn apply_processors(
                 }
             }
             Processor::RhaiRef { id, args } => {
-                if let Some(new_body) = apply_rhai_processor_ref(
+                if let Some(new_body) = apply_rhai_ref(
                     rhai,
                     processor_ref,
                     id.as_str(),
@@ -170,7 +134,7 @@ pub(crate) fn apply_processors(
     Ok(result)
 }
 
-pub(crate) fn apply_rhai_processor(
+pub(crate) fn apply_rhai(
     rhai: &RhaiState,
     rref: ResourceRef,
     script: &str,
@@ -186,7 +150,7 @@ pub(crate) fn apply_rhai_processor(
     call_rhai(&engine, &ast, rctx.into(), Array::new(), body)
 }
 
-pub(crate) fn apply_rhai_processor_ref(
+pub(crate) fn apply_rhai_ref(
     rhai: &RhaiState,
     rref: ResourceRef,
     script_id: &str,
@@ -228,54 +192,4 @@ fn call_rhai(
     };
 
     Ok(value)
-}
-
-pub(crate) fn apply_lua_processor(
-    lua: &LuaState,
-    pref: ResourceRef,
-    script: &str,
-    rctx: DeceitResponseContext,
-    body: &[u8],
-) -> color_eyre::Result<Option<Vec<u8>>> {
-    let id = pref.to_resource_id("lua-processor");
-
-    let lua_fn = lua
-        .to_lua_function(id, script)
-        .map_err(|e| eyre!("{e:?}"))?;
-
-    apply_lua(lua_fn, rctx.into(), body, vec![])
-}
-
-pub(crate) fn apply_lua_processor_script(
-    lua: &LuaState,
-    _pref: ResourceRef,
-    script_id: &str,
-    args: Vec<String>,
-    rctx: DeceitResponseContext,
-    body: &[u8],
-) -> color_eyre::Result<Option<Vec<u8>>> {
-    let lua_fn = lua.get_lua_script(script_id).map_err(|e| eyre!("{e:?}"))?;
-
-    apply_lua(lua_fn, rctx.into(), body, args)
-}
-
-fn apply_lua(
-    lua_fn: Function,
-    ctx: LuaResponseContext,
-    body: &[u8],
-    args: Vec<String>,
-) -> color_eyre::Result<Option<Vec<u8>>> {
-    let value = lua_fn
-        .call::<mlua::Value>((ctx, args, body))
-        .map_err(|e| eyre!("{e:?}"))?;
-
-    if value.is_nil() || value.is_null() {
-        return Ok(None);
-    }
-
-    if let Some(r) = value.as_string() {
-        Ok(Some(r.as_bytes().to_vec()))
-    } else {
-        Err(eyre!("Lua processor returned not a string value."))
-    }
 }

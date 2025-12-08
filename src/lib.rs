@@ -1,6 +1,5 @@
 pub mod deceit;
 mod handlers;
-pub mod lua;
 pub mod matchers;
 mod output;
 pub mod processors;
@@ -26,7 +25,6 @@ use actix_web::{
 use async_lock::RwLock;
 use serde::{Deserialize, Serialize};
 
-use crate::lua::{LuaScript, LuaState};
 use crate::output::MiniJinjaState;
 use crate::processors::ApateProcessor;
 use crate::rhai::{RhaiScript, RhaiState};
@@ -115,15 +113,11 @@ impl ApateConfig {
     }
 
     fn into_state(self) -> ApateState {
-        let lua = LuaState::default();
-        lua.clear_and_update(self.specs.lua.clone());
-
         let rhai = RhaiState::default();
         rhai.clear_and_update(self.specs.rhai.clone());
         ApateState {
             specs: RwLock::new(self.specs),
             processors: self.processors,
-            lua,
             rhai,
             ..Default::default()
         }
@@ -133,8 +127,6 @@ impl ApateConfig {
 #[derive(Clone, Debug, Default, Deserialize, Serialize)]
 pub struct ApateSpecs {
     #[serde(default)]
-    pub lua: Vec<LuaScript>,
-    #[serde(default)]
     pub rhai: Vec<RhaiScript>,
     #[serde(default)]
     pub deceit: Vec<Deceit>,
@@ -143,17 +135,14 @@ pub struct ApateSpecs {
 impl ApateSpecs {
     pub fn append(&mut self, specs: ApateSpecs) {
         self.deceit.extend(specs.deceit);
-        self.lua.extend(specs.lua);
         self.rhai.extend(specs.rhai);
     }
 
     pub fn prepend(&mut self, mut specs: ApateSpecs) {
         specs.deceit.extend(self.deceit.clone());
-        specs.lua.extend(self.lua.clone());
         specs.rhai.extend(self.rhai.clone());
 
         self.deceit = specs.deceit;
-        self.lua = specs.lua;
         self.rhai = specs.rhai;
     }
 }
@@ -165,7 +154,6 @@ pub struct ApateState {
     pub counters: ApateCounters,
     pub processors: HashMap<String, ApateProcessor>,
     pub minijinja: MiniJinjaState,
-    pub lua: LuaState,
     pub rhai: RhaiState,
 }
 

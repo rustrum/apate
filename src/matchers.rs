@@ -7,13 +7,11 @@
 //!  - if matchers failed on response level then next response will be handled
 //!  - if all matchers responses failed, than next deceit will be handled
 use jsonpath_rust::JsonPath as _;
-use mlua::Function;
 use rhai::{AST, Array, Engine, Scope};
 use serde::{Deserialize, Serialize};
 
 use crate::{
     RequestContext, ResourceRef,
-    lua::{LuaRequestContext, LuaState},
     rhai::{RhaiRequestContext, RhaiState},
 };
 
@@ -51,16 +49,6 @@ pub enum Matcher {
         path: String,
         eq: String,
     },
-
-    Lua {
-        script: String,
-    },
-
-    LuaScript {
-        id: String,
-        args: Vec<String>,
-    },
-
     Rhai {
         script: String,
     },
@@ -75,7 +63,6 @@ pub fn is_matcher_approves(
     rref: &ResourceRef,
     matcher: &Matcher,
     ctx: &RequestContext,
-    lua: &LuaState,
     rhai: &RhaiState,
 ) -> bool {
     match matcher {
@@ -84,10 +71,7 @@ pub fn is_matcher_approves(
         Matcher::Method { eq } => match_method(eq.as_str(), ctx),
         Matcher::Header { key, value } => match_header(key.as_str(), value.as_str(), ctx),
         Matcher::Json { path, eq } => match_json(path.as_str(), eq.as_str(), ctx),
-        Matcher::Lua { script } => match_lua(lua, rref, script.as_str(), ctx.clone()),
-        Matcher::LuaScript { id, args } => {
-            match_lua_ref(lua, rref, id.as_str(), ctx.clone(), args.clone())
-        }
+
         Matcher::Rhai { script } => match_rhai(rhai, rref, script, ctx),
         Matcher::RhaiRef { id, args } => match_rhai_ref(rhai, rref, id.as_str(), ctx, args.clone()),
     }
@@ -136,54 +120,6 @@ pub fn match_json(path: &str, value: &str, ctx: &RequestContext) -> bool {
             false
         }
     })
-}
-
-pub fn match_lua_ref(
-    lua: &LuaState,
-    rref: &ResourceRef,
-    script_id: &str,
-    ctx: RequestContext,
-    args: Vec<String>,
-) -> bool {
-    let lua_fn = match lua.get_lua_script(script_id) {
-        Ok(lfn) => lfn,
-        Err(e) => {
-            log::error!("Can't load LUA top level scrip by id:{script_id} path:{rref} {e:?}");
-            return false;
-        }
-    };
-    call_lua_fn(lua_fn, ctx.into(), args)
-}
-
-pub fn match_lua(lua: &LuaState, rref: &ResourceRef, script: &str, ctx: RequestContext) -> bool {
-    let id = rref.to_resource_id("lua-matcher");
-    let lua_fn = match lua.to_lua_function(id.clone(), script) {
-        Ok(lfn) => lfn,
-        Err(e) => {
-            log::error!("Can't load LUA matcher by path:{rref} {e:?}");
-            return false;
-        }
-    };
-    call_lua_fn(lua_fn, ctx.into(), vec![])
-}
-
-fn call_lua_fn(lua_fn: Function, ctx: LuaRequestContext, args: Vec<String>) -> bool {
-    let result = lua_fn.call::<mlua::Value>((ctx, args));
-
-    match result {
-        Ok(v) => {
-            if let Some(r) = v.as_boolean() {
-                r
-            } else {
-                log::error!("Can't parse LUA matchers result as boolean. {v:?}");
-                false
-            }
-        }
-        Err(e) => {
-            log::error!("Can't execute LUA matcher {e:?}");
-            false
-        }
-    }
 }
 
 pub fn match_rhai_ref(
