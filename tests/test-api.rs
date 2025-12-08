@@ -1,3 +1,4 @@
+use apate::output::OutputType;
 use serial_test::serial;
 use std::collections::HashMap;
 
@@ -134,6 +135,7 @@ async fn complex_configuration_test() {
                     DeceitResponseBuilder::default()
                         .code(200)
                         .add_header("Content-Type", "application/json")
+                        .with_output_type(OutputType::Jinja)
                         .with_output(r#"{"id": "{{ path_args.id }}", "name":"Ignat"}"#)
                         .build(),
                 )

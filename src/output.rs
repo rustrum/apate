@@ -19,10 +19,9 @@ use crate::deceit::DeceitResponseContext;
 #[serde(rename_all = "snake_case")]
 pub enum OutputType {
     /// Output represented as a plain text.
-    /// TODO: Make text default output type ?
+    #[default]
     Text,
     /// Handle output as minijinja template.
-    #[default]
     Jinja,
     /// Handle output as binary data that will be decoded from HEX string (no 0x prefix expected).
     Hex,

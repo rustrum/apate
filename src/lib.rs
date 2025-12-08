@@ -1,7 +1,7 @@
 pub mod deceit;
 mod handlers;
 pub mod matchers;
-mod output;
+pub mod output;
 pub mod processors;
 pub mod rhai;
 pub mod test;

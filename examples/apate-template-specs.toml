@@ -6,6 +6,7 @@
 uris = ["/tpl/fn"]
 headers = [["Content-Type", "text/markdown"]]
 [[deceit.responses]]
+type = "jinja"
 output = """
 # Template functions
 
@@ -56,6 +57,7 @@ uris = ["/tpl/ctx", "/tpl/ctx/{custom_value}"]
 headers = [["Content-Type", "text/markdown"]]
 json_request = true
 [[deceit.responses]]
+type = "jinja"
 output = """
 # Accessing request context
 
