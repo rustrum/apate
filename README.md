@@ -138,36 +138,52 @@ fn my_api_test() {
 
 ## Making your custom Apate server
 
-If you need to add custom rust logic to Apate you can easily create your own server based on Apate library.
+It is possible to run Apate embedded into your application.
+You may need this to add custom rust logic into response processing.
+For example it could be response signature functionality.
 See [processors](./examples/processors.rs) example.
 
 
-## Apate specification files
+## Apate specification
 
-Repo contains [specification example file](./examples/apate-specs.toml) with verbose comments.
-I hope that you will be smart enough to understand it by yourself.
+To understand how it works look into [specification example file](./examples/apate-specs.toml), it has verbose comments.
+There are other specification files as well with more advanced examples.
 
-### Template syntax
+**Rhai** scripting language is used to extend configuration capabilities. 
+See [Rhai website](https://rhai.rs), [Rhai docs](https://rhai.rs/book/ref/index.html) and [configuration examples](./examples/apate-specs-rhai.toml).
 
-Response content utilize [minijinja](https://docs.rs/minijinja/latest/minijinja) template engine.
+### Matchers
+
+Piece of DSL or Rhai script that returns boolean. In order to proceed further all matchers must return true.
+
+### Processors
+
+Type of logic that runs after response output was generated.
+As a result processor could return different body content that will be used instead of original one 
+and will be passed to all other processors downstream.
+
+Processors are defined using **Rhai script**.
+
+### Response types
+
+#### Text
+
+Default response type just return return as provided in specs.
+
+####  Binary content
+
+It is possible to respond with binary content instead of string.
+You just need to provide binary content in HEX or Base64 formats.
+See examples [here](./examples/apate-specs-bin.toml).
+
+### Jinja (minijinja) templates
+
+Response with `type="jinja"` processed as a jinja template 
+using [minijinja](https://docs.rs/minijinja/latest/minijinja) template engine.
 Template syntax documentation can be found [here](https://docs.rs/minijinja/latest/minijinja/syntax).
 See also [minijinja filters](https://docs.rs/minijinja/latest/minijinja/filters).
 
-Look for template usage examples in [this specs file](./examples/apate-template-specs.toml).
-
-### Non string responses
-
-It is possible to respond with binary content instead of string.
-See examples [here](./examples/apate-specs-bin.toml).
-
-### Custom post processors
-
-You may need to add custom logic into API to make it looks real.
-For example all your responses must be signed.
-In this case it is better to implement signing functionality in Apate
-instead of adding "skip signature verification" flag to your main app.
-
-Usage examples could be found [here](./examples/processors.rs).
+See usage examples in [this specs file](./examples/apate-template-specs.toml).
 
 
 ## Butt why do I really need Apate?
