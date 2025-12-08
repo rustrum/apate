@@ -152,6 +152,9 @@ There are other specification files as well with more advanced examples.
 **Rhai** scripting language is used to extend configuration capabilities. 
 See [Rhai website](https://rhai.rs), [Rhai docs](https://rhai.rs/book/ref/index.html) and [configuration examples](./examples/apate-specs-rhai.toml).
 
+I expect that for most cases you will not need any Rhai scripting. It is meant only for complex scenarios.
+
+
 ### Matchers
 
 Piece of DSL or Rhai script that returns boolean. In order to proceed further all matchers must return true.
@@ -166,24 +169,23 @@ Processors are defined using **Rhai script**.
 
 ### Response types
 
-#### Text
+#### String (default)
 
-Default response type just return return as provided in specs.
+Simply returns string from specification as is.
 
 ####  Binary content
 
-It is possible to respond with binary content instead of string.
-You just need to provide binary content in HEX or Base64 formats.
+Can handle output string as a binary content in  HEX or Base64 formats.
 See examples [here](./examples/apate-specs-bin.toml).
 
 ### Jinja (minijinja) templates
 
-Response with `type="jinja"` processed as a jinja template 
+Response with `output_type="jinja"` processed as a jinja template 
 using [minijinja](https://docs.rs/minijinja/latest/minijinja) template engine.
 Template syntax documentation can be found [here](https://docs.rs/minijinja/latest/minijinja/syntax).
 See also [minijinja filters](https://docs.rs/minijinja/latest/minijinja/filters).
 
-See usage examples in [this specs file](./examples/apate-template-specs.toml).
+Apate usage examples available in [this specs file](./examples/apate-template-specs.toml).
 
 
 ## Butt why do I really need Apate?

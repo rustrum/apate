@@ -27,6 +27,7 @@ fn non_async_test() {
                 uris: vec!["/user/check".to_string()],
                 matchers: vec![Matcher::Method {
                     eq: "POST".to_string(),
+                    negate: false,
                 }],
                 headers: vec![("Content-Type".to_string(), "application/json".to_string())],
                 responses: vec![DeceitResponse {

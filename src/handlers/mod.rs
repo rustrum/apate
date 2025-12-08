@@ -49,7 +49,7 @@ async fn deceit_handler(req: HttpRequest, body: Bytes, state: Data<ApateState>) 
             continue;
         };
 
-        log::debug!("Deceit successful matched (^_^). Processing response: {idx}");
+        log::debug!("Deceit {deceit_ref} matched (^_^). Processing response: {idx}");
 
         let Some(response) = d.responses.get(idx) else {
             log::error!("Wow we definitely must have response for this index {idx}");

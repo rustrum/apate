@@ -64,9 +64,21 @@ matchers = [{ type = "method", eq = "POST" }]
 
 [[deceit.responses]]
 code = 416
-matchers = [{ type = "json", path = "$.name", eq = "Rajesh" }]
+matchers = [
+    { type = "or", matchers = [
+        { type = "json", path = "$.name", eq = "Rajesh" },
+        { type = "json", path = "$.name", eq = "Abhishek" },
+        { type = "json", path = "$.name", eq = "Ram" },
+        { type = "json", path = "$.name", eq = "Sri" },
+        { type = "json", path = "$.name", eq = "Ramesh" },
+    ] },
+]
+output_type = "jinja"
 output = """
-{"message": "Rajesh? Too mach of them in this world already! Be creative, find another name!"}
+{
+    "error": "Name {{ request_json.name }} occupy too much space in our DB.",
+    "message": "Be creative, invent another name!"
+}
 
 """
 
@@ -82,7 +94,7 @@ output = """
 """
 
 [[deceit.responses]]
-type = "jinja"
+output_type = "jinja"
 output = """
 { "id": 42, "name": "{{ request_json.name }}", "surname": "{{ request_json.surname }}" }
 
@@ -112,7 +124,7 @@ output = """
 
 # Also we can use some template engine logic to do tricky  stuff :)
 [[deceit.responses]]
-type = "jinja"
+output_type = "jinja"
 output = """
 {%- if query_args.id %}
     {%- set id = query_args.id %}

@@ -16,7 +16,7 @@ use serde::{Deserialize, Serialize};
 
 use crate::{
     ApateConfig, ApateCounters, RequestContext, ResourceRef,
-    matchers::{Matcher, is_matcher_approves},
+    matchers::{Matcher, matchers_and},
     output::{MiniJinjaState, OutputType},
     processors::Processor,
     rhai::RhaiState,
@@ -76,12 +76,8 @@ impl Deceit {
         ctx: &RequestContext,
         rhai: &RhaiState,
     ) -> Option<usize> {
-        // Top level matchers
-        for (mid, matcher) in self.matchers.iter().enumerate() {
-            let matcher_ref = rref.with_level(mid);
-            if !is_matcher_approves(&matcher_ref, matcher, ctx, rhai) {
-                return None;
-            }
+        if !matchers_and(rref, rhai, ctx, &self.matchers) {
+            return None;
         }
 
         // Deceit level matchers
@@ -91,11 +87,9 @@ impl Deceit {
                 return Some(idx);
             }
             let deceit_ref = rref.with_level(idx);
-            for (mid, matcher) in dr.matchers.iter().enumerate() {
-                let matcher_ref = deceit_ref.with_level(mid);
-                if is_matcher_approves(&matcher_ref, matcher, ctx, rhai) {
-                    return Some(idx);
-                }
+
+            if matchers_and(&deceit_ref, rhai, ctx, &dr.matchers) {
+                return Some(idx);
             }
         }
 
@@ -309,6 +303,7 @@ impl DeceitBuilder {
     pub fn require_method(mut self, http_method: &str) -> Self {
         self.matchers.push(Matcher::Method {
             eq: http_method.to_string(),
+            negate: false,
         });
         self
     }
@@ -317,6 +312,7 @@ impl DeceitBuilder {
         self.matchers.push(Matcher::Header {
             key: key.to_string(),
             value: value.to_string(),
+            negate: false,
         });
         self
     }
@@ -325,6 +321,7 @@ impl DeceitBuilder {
         self.matchers.push(Matcher::QueryArg {
             name: name.to_string(),
             value: value.to_string(),
+            negate: false,
         });
         self
     }
@@ -333,6 +330,7 @@ impl DeceitBuilder {
         self.matchers.push(Matcher::PathArg {
             name: name.to_string(),
             value: value.to_string(),
+            negate: false,
         });
         self
     }
@@ -341,6 +339,7 @@ impl DeceitBuilder {
         self.matchers.push(Matcher::Json {
             path: json_path.to_string(),
             eq: eq.to_string(),
+            negate: false,
         });
         self
     }
@@ -415,6 +414,7 @@ impl DeceitResponseBuilder {
     pub fn require_method(mut self, http_method: &str) -> Self {
         self.matchers.push(Matcher::Method {
             eq: http_method.to_string(),
+            negate: false,
         });
         self
     }
@@ -423,6 +423,7 @@ impl DeceitResponseBuilder {
         self.matchers.push(Matcher::Header {
             key: key.to_string(),
             value: value.to_string(),
+            negate: false,
         });
         self
     }
@@ -431,6 +432,7 @@ impl DeceitResponseBuilder {
         self.matchers.push(Matcher::QueryArg {
             name: name.to_string(),
             value: value.to_string(),
+            negate: false,
         });
         self
     }
@@ -439,6 +441,7 @@ impl DeceitResponseBuilder {
         self.matchers.push(Matcher::PathArg {
             name: name.to_string(),
             value: value.to_string(),
+            negate: false,
         });
         self
     }
@@ -447,6 +450,7 @@ impl DeceitResponseBuilder {
         self.matchers.push(Matcher::Json {
             path: json_path.to_string(),
             eq: eq.to_string(),
+            negate: false,
         });
         self
     }
