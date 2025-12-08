@@ -20,11 +20,10 @@ Only small changes and new features planned for future stable release v0.1.0.
 
 ## Features
 
- - Mocking any string based response
- - Binary response support
- - Jinja template language for customizing responses
- - Rhai scripting for advanced scenarios
- - Custom builds with custom rust extensions
+ - Mocking any string & binary responses
+ - Use Jinja template to customize response body
+ - Scripting with [Rhai](https://rhai.rs) available for complex scenarios
+ - Rust extensions for custom builds
 
 
 ## Running Apate server
@@ -161,11 +160,10 @@ Piece of DSL or Rhai script that returns boolean. In order to proceed further al
 
 ### Processors
 
-Type of logic that runs after response output was generated.
-As a result processor could return different body content that will be used instead of original one 
-and will be passed to all other processors downstream.
+Runs additional logic that can modify already prepared response body.
 
-Processors are defined using **Rhai script**.
+Processors are defined using **Rhai script**. Rust processors available only for custom applications.
+
 
 ### Response types
 

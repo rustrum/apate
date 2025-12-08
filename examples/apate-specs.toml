@@ -64,8 +64,10 @@ matchers = [{ type = "method", eq = "POST" }]
 
 [[deceit.responses]]
 code = 416
+# There are matchers with types "and"/"or" which can combine other matchers
 matchers = [
     { type = "or", matchers = [
+        # As you've already guessed only one matcher below could be true
         { type = "json", path = "$.name", eq = "Rajesh" },
         { type = "json", path = "$.name", eq = "Abhishek" },
         { type = "json", path = "$.name", eq = "Ram" },
