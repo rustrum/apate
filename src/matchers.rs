@@ -87,8 +87,8 @@ impl Display for Matcher {
             Self::PathArg { .. } => "PATH_ARG",
             Self::QueryArg { .. } => "QUERY_ARG",
             Self::Json { .. } => "JSON",
-            Self::Rhai { .. } => "RHAII",
-            Self::RhaiRef { .. } => "RHAII_REF",
+            Self::Rhai { .. } => "RHAI",
+            Self::RhaiRef { .. } => "RHAI_REF",
         };
 
         write!(f, "{}", value)

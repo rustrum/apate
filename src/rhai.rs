@@ -4,7 +4,7 @@ use std::{
 };
 
 use actix_web::web::Bytes;
-use rhai::{AST, Engine, Map as RhaiMap, ParseError, ParseErrorType, Position};
+use rhai::{AST, Blob, Engine, Map as RhaiMap, ParseError, ParseErrorType, Position};
 use serde::{Deserialize, Serialize};
 
 use crate::{RequestContext, deceit::DeceitResponseContext};
@@ -137,6 +137,10 @@ impl RhaiRequestContext {
             .map(|(k, v)| (k.into(), v.into()))
             .collect()
     }
+
+    pub fn load_body(&mut self) -> Blob {
+        Blob::from(self.body.to_vec())
+    }
 }
 
 impl From<RequestContext> for RhaiRequestContext {
@@ -211,7 +215,8 @@ fn build_rhai_engine() -> Engine {
         .register_get("path", RhaiRequestContext::get_path)
         .register_fn("load_headers", RhaiRequestContext::load_headers)
         .register_fn("load_query_args", RhaiRequestContext::load_query_args)
-        .register_fn("load_path_args", RhaiRequestContext::load_path_args);
+        .register_fn("load_path_args", RhaiRequestContext::load_path_args)
+        .register_fn("load_body", RhaiRequestContext::load_body);
 
     engine
         .register_type::<RhaiResponseContext>()

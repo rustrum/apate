@@ -293,6 +293,7 @@ pub struct ApateConfigBuilder {
     port: u16,
     deceit: Vec<Deceit>,
     pub processors: HashMap<String, ApateProcessor>,
+    scripts: HashMap<String, String>,
 }
 
 impl Default for ApateConfigBuilder {
@@ -301,6 +302,7 @@ impl Default for ApateConfigBuilder {
             port: DEFAULT_PORT,
             deceit: Default::default(),
             processors: Default::default(),
+            scripts: Default::default(),
         }
     }
 }
@@ -308,6 +310,11 @@ impl Default for ApateConfigBuilder {
 impl ApateConfigBuilder {
     pub fn with_port(mut self, port: u16) -> Self {
         self.port = port;
+        self
+    }
+
+    pub fn add_script(mut self, id: &str, script: &str) -> Self {
+        self.scripts.insert(id.to_string(), script.to_string());
         self
     }
 
@@ -326,7 +333,11 @@ impl ApateConfigBuilder {
             port: self.port,
             specs: ApateSpecs {
                 deceit: self.deceit,
-                ..Default::default()
+                rhai: self
+                    .scripts
+                    .into_iter()
+                    .map(|(id, script)| RhaiScript { id, script })
+                    .collect(),
             },
             processors: self.processors,
         }
