@@ -20,10 +20,12 @@ Only small changes and new features planned for future stable release v0.1.0.
 
 ## Features
 
+ - Standalone server app with web UI
  - Mocking any string & binary responses
- - Use Jinja template to customize response body
- - Scripting with [Rhai](https://rhai.rs) available for complex scenarios
- - Rust extensions for custom builds
+ - Jinja templates to customize response body
+ - [Rhai](https://rhai.rs) scripting for advanced scenarios
+ - Unit tests friendly rust library
+ - Ability to build custom mocking server with your rust extensions
 
 
 ## Running Apate server
