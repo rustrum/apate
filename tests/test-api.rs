@@ -137,7 +137,7 @@ async fn complex_configuration_test() {
                         .code(200)
                         .add_header("Content-Type", "application/json")
                         .with_output_type(OutputType::Jinja)
-                        .with_output(r#"{"id": "{{ path_args.id }}", "name":"Ignat"}"#)
+                        .with_output(r#"{"id": "{{ ctx.load_path_args().id }}", "name":"Ignat"}"#)
                         .build(),
                 )
                 .build(),

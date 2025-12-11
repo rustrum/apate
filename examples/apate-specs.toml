@@ -58,7 +58,6 @@ output = """
 # Mocking user add functionality
 [[deceit]]
 uris = ["/user/add"]
-json_request = true
 headers = [["Content-Type", "application/json"]]
 matchers = [{ type = "method", eq = "POST" }]
 
@@ -75,10 +74,10 @@ matchers = [
         { type = "json", path = "$.name", eq = "Ramesh" },
     ] },
 ]
-output_type = "jinja"
+type = "jinja"
 output = """
 {
-    "error": "Name {{ request_json.name }} occupy too much space in our DB.",
+    "error": "Name {{ ctx.load_body_json().name }} occupy too much space in our DB.",
     "message": "Be creative, invent another name!"
 }
 
@@ -96,9 +95,10 @@ output = """
 """
 
 [[deceit.responses]]
-output_type = "jinja"
+type = "jinja"
 output = """
-{ "id": 42, "name": "{{ request_json.name }}", "surname": "{{ request_json.surname }}" }
+{%- set input = ctx.load_body_json() %}
+{ "id": 42, "name": "{{ input.name }}", "surname": "{{ input.surname }}" }
 
 """
 
@@ -126,14 +126,14 @@ output = """
 
 # Also we can use some template engine logic to do tricky  stuff :)
 [[deceit.responses]]
-output_type = "jinja"
+type = "jinja"
 output = """
-{%- if query_args.id %}
-    {%- set id = query_args.id %}
-{%- elif path_args.user_id %}
-    {%- set id = path_args.user_id %}
+{%- if ctx.load_query_args().id %}
+    {%- set id = ctx.load_query_args().id %}
+{%- elif ctx.load_path_args().user_id %}
+    {%- set id = ctx.load_path_args().user_id %}
 {%- else %}
-    {%- set _ = force_response_code(500) %}
+    {%- set _ = ctx.set_response_code(500) %}
 {%- endif %}
 {%- if id %}
 {"id":"{{ id }}", "name":"Rajesh", "surname": "undefined is not a function"}

@@ -10,20 +10,19 @@ type = "jinja"
 output = """
 # Template functions
 
-
-## force_response_code(http_code)
+## ctx.force_response_code(http_code)
 
 This function force/overwrite response code for this request.
-{%- set _ = force_response_code(200) %}
+{%- set _ = ctx.set_response_code(200) %}
 
 
-## inc_counter("key")
+## ctx.inc_counter("key")
 
 By input key returns previous counter value and increment counter by one on each function call.
  
- - inc_counter("test1"): {{ inc_counter("test1") }}
- - inc_counter("test2"): {{ inc_counter("test2") }}
- - inc_counter("test2") + 42: {{ inc_counter("test2") + 42 }}
+ - ctx.inc_counter("test1"): {{ ctx.inc_counter("test1") }}
+ - ctx.inc_counter("test2"): {{ ctx.inc_counter("test2") }}
+ - ctx.inc_counter("test2") + 42: {{ ctx.inc_counter("test2") + 42 }}
 
 
 ## uuid_v4()
@@ -55,7 +54,6 @@ Return random number in some range:
 [[deceit]]
 uris = ["/tpl/ctx", "/tpl/ctx/{custom_value}"]
 headers = [["Content-Type", "text/markdown"]]
-json_request = true
 [[deceit.responses]]
 type = "jinja"
 output = """
@@ -63,46 +61,46 @@ output = """
 
 
 ## Current path
-Available in `path` variable.
+Available in `ctx.path` variable.
 
-Current path is: {{ path }}
+Current path is: {{ ctx.path }}
 
 
 ## Path arguments
 
-Path arguments from uri pattern can be accessed via `path_args` dictionary.
+Path arguments from uri pattern can be accessed via `ctx.load_path_args()` dictionary.
 
-Path argument `custom_value` is: {{ path_args.custom_value | default('DOES_NOT_EXIST') }}
+Path argument `custom_value` is: {{ ctx.load_path_args().custom_value | default('DOES_NOT_EXIST') }}
 
 
 ## Query string arguments
 
-Template has context variable `query_args` which is a map with all query string arguments.
+Template has context variable `ctx.load_query_args()` which is a map with all query string arguments.
 
 Query string arguments found:
 
-{%- for key in query_args if query_args %}
- - {{ key }} -> {{ query_args[key] }}
+{%- for key in ctx.load_query_args() if ctx.load_query_args() %}
+ - {{ key }} -> {{ ctx.load_query_args()[key] }}
 {%- endfor %}
 
 
 ## Request JSON payload
 
-If request payload is parsed as JSON it will be available as `request_json` variable.
-{%- if request_json %}
+If request payload is parsed as JSON it will be available as `ctx.load_body_json()`.
+{%- if ctx.load_body_json() %}
 
-JSON that was parsed and then encoded back: {{ request_json | tojson }}
+JSON that was parsed and then encoded back: {{ ctx.load_body_json() | tojson }}
 {%- endif %}
 
 
 ## Headers
 
-Also template has a map variable `headers` with all request headers.
+Also template has a map variable `ctx.load_headers()` with all request headers.
 
 Request headers are:
 
-{%- for key in headers if headers %}
- - {{ key }} -> {{ headers[key] }}
+{%- for key in ctx.load_headers() if ctx.load_headers() %}
+ - {{ key }} -> {{ ctx.load_headers()[key] }}
 {%- endfor %}
 
 """

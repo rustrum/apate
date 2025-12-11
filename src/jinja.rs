@@ -1,40 +1,127 @@
-use std::{collections::HashMap, sync::Arc};
+use std::{
+    fmt::Debug,
+    sync::{Arc, atomic::Ordering},
+};
 
-use minijinja::Environment;
+use minijinja::{
+    Environment, State, Value, context,
+    value::{Object, ObjectRepr},
+};
 use rand::{Rng as _, RngCore as _};
-use serde::Serialize;
 use uuid::Uuid;
 
 use crate::deceit::DeceitResponseContext;
 
-#[derive(Serialize)]
-pub struct MiniJinjaResponseContext<'a> {
-    pub path: &'a str,
-
-    pub headers: &'a HashMap<String, String>,
-
-    pub query_args: &'a HashMap<String, String>,
-
-    pub path_args: &'a HashMap<String, String>,
-
-    pub request_json: &'a Option<serde_json::Value>,
+/// Response context for mininijinja templates that is available under `ctx` variable.
+///
+/// Expose next API:
+///  - ctx.method -> returns request method
+///  - ctx.path -> returns request path
+///  - ctx.response_code -> get set custom response code if any (default 0 if not set)
+///  - ctx.load_headers() -> build request headers map (lowercase keys)
+///  - ctx.load_query_args() -> build map with URL query arguments
+///  - ctx.load_path_args() -> build arguments map from specs URIs like /mypath/{user_id}/{item_id}
+///  - ctx.load_body_string() -> load request body as string
+///  - ctx.load_body_json() -> load request body as json
+///  - ctx.inc_counter("key") -> increment counter by key and returns previous value
+pub struct MiniJinjaResponseContext {
+    ctx: DeceitResponseContext,
 }
 
-impl<'a> MiniJinjaResponseContext<'a> {
-    pub fn new(ctx: &'a DeceitResponseContext) -> Self {
-        Self {
-            path: ctx.path.as_str(),
-            headers: &ctx.headers,
-            query_args: &ctx.query_args,
-            path_args: &ctx.path_args,
-            request_json: &ctx.request_json,
+impl Debug for MiniJinjaResponseContext {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("MiniJinjaResponseContext")
+            .field("ctx", &"!debug_not_supported!")
+            .finish()
+    }
+}
+
+impl MiniJinjaResponseContext {
+    pub fn new(ctx: DeceitResponseContext) -> Self {
+        Self { ctx }
+    }
+}
+impl Object for MiniJinjaResponseContext {
+    fn repr(self: &Arc<Self>) -> ObjectRepr {
+        ObjectRepr::Plain
+    }
+
+    fn get_value(self: &Arc<Self>, field: &Value) -> Option<Value> {
+        match field.as_str()? {
+            "method" => Some(Value::from(self.ctx.method.as_str())),
+            "path" => Some(Value::from(self.ctx.path.as_str())),
+            _ => None,
+        }
+    }
+
+    fn call_method(
+        self: &Arc<Self>,
+        _state: &State<'_, '_>,
+        method: &str,
+        args: &[Value],
+    ) -> Result<Value, minijinja::Error> {
+        match method {
+            "load_headers" => Ok(Value::from(self.ctx.headers.as_ref().clone())),
+            "load_query_args" => Ok(Value::from(self.ctx.query_args.as_ref().clone())),
+            "load_path_args" => Ok(Value::from(self.ctx.path_args.as_ref().clone())),
+            "load_body_string" => {
+                if self.ctx.request_body.trim_ascii().is_empty() {
+                    Ok(Value::default())
+                } else {
+                    let body = String::from_utf8_lossy(self.ctx.request_body.as_ref());
+                    Ok(Value::from(body))
+                }
+            }
+            "load_body_json" => match self.ctx.load_request_json() {
+                Ok(v) => Ok(Value::from_serialize(v.as_ref())),
+                Err(e) => {
+                    log::error!("Can't parse response body as JSON: {e}");
+                    Err(minijinja::Error::from(minijinja::ErrorKind::CannotUnpack))
+                }
+            },
+            "inc_counter" => {
+                if args.len() != 1 {
+                    return Err(minijinja::Error::from(
+                        minijinja::ErrorKind::MissingArgument,
+                    ));
+                }
+                let Some(key) = args[0].as_str() else {
+                    return Err(minijinja::Error::from(minijinja::ErrorKind::NonKey));
+                };
+                self.ctx
+                    .counters
+                    .get_and_increment(key)
+                    .map(Value::from)
+                    .map_err(|e| {
+                        minijinja::Error::new(
+                            minijinja::ErrorKind::UndefinedError,
+                            format!("Can't get counter value for key \"{key}\". {e:?}"),
+                        )
+                    })
+            }
+            "set_response_code" => {
+                if args.len() != 1 {
+                    return Err(minijinja::Error::from(
+                        minijinja::ErrorKind::MissingArgument,
+                    ));
+                }
+                let Some(code) = args[0].as_i64() else {
+                    return Err(minijinja::Error::from(minijinja::ErrorKind::NonPrimitive));
+                };
+                self.ctx.response_code.store(code as u16, Ordering::Relaxed);
+                Ok(Value::default())
+            }
+            _ => Err(minijinja::Error::from(minijinja::ErrorKind::UnknownMethod)),
         }
     }
 }
 
-// impl<'a> Object for MiniJinjaResponseContext<'a> {
-
-// }
+pub fn build_tpl_context(ctx: DeceitResponseContext) -> minijinja::Value {
+    let mjctx = MiniJinjaResponseContext::new(ctx);
+    context! {
+       ctx => Value::from_object(mjctx)
+    }
+}
 
 /// Holds cached minijinja environment.
 ///

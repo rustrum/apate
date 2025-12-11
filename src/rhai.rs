@@ -104,7 +104,7 @@ impl RhaiState {
 /// Expose next API:
 ///  - ctx.method -> returns request method
 ///  - ctx.path -> returns request path
-///  - ctx.load_header() -> build request headers map (lowercase keys)
+///  - ctx.load_headers() -> build request headers map (lowercase keys)
 ///  - ctx.load_query_args() -> build map with URL query arguments
 ///  - ctx.load_path_args() -> build arguments map from specs URIs like /mypath/{user_id}/{item_id}
 ///  - ctx.load_body() -> reads request body as Blob
@@ -171,7 +171,9 @@ impl From<RequestContext> for RhaiRequestContext {
 ///
 /// Expose next API:
 ///  - ctx.path -> returns request path
-///  - ctx.load_header() -> build request headers map (lowercase keys)
+///  - ctx.response_code -> get set custom response code if any (default 0 if not set)
+///  - ctx.inc_counter("key") -> increment counter by key and returns previous value
+///  - ctx.load_headers() -> build request headers map (lowercase keys)
 ///  - ctx.load_query_args() -> build map with URL query arguments
 ///  - ctx.load_path_args() -> build arguments map from specs URIs like /mypath/{user_id}/{item_id}
 #[derive(Clone)]

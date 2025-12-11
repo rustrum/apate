@@ -1,4 +1,7 @@
-use std::io;
+use std::{
+    hash::{DefaultHasher, Hash as _, Hasher},
+    io,
+};
 
 use apate::{
     ApateConfigBuilder, DEFAULT_RUST_LOG, apate_server_run,
@@ -91,8 +94,11 @@ impl PostProcessor for JsonSignerPostProcessor {
                 .unwrap_or_default()
                 .as_bytes(),
         );
+        let mut h = DefaultHasher::new();
+        seed.hash(&mut h);
+        data.hash(&mut h);
 
-        let hash = cityhasher::hash_with_seed(&data, seed as u64);
+        let hash = h.finish();
 
         // Yes this is not a signature, but this is just an example
         json_response.insert("signature".to_string(), hash.into());

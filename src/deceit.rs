@@ -3,17 +3,16 @@
 
 use std::{
     collections::HashMap,
-    sync::{Arc, atomic::AtomicU16},
+    sync::{Arc, Mutex, atomic::AtomicU16},
 };
 
 use actix_router::{Path, ResourceDef};
-use actix_web::http::StatusCode;
+use actix_web::{http::StatusCode, web::Bytes};
 
 use serde::{Deserialize, Serialize};
 
 use crate::{
     ApateConfig, ApateCounters, RequestContext, ResourceRef,
-    jinja::MiniJinjaState,
     matchers::{Matcher, matchers_and},
     output::OutputType,
     processors::Processor,
@@ -37,10 +36,6 @@ pub struct Deceit {
     /// If one matcher fails - current deceit processing will be skipped.
     #[serde(default)]
     pub matchers: Vec<Matcher>,
-
-    /// Parse request body as JSON and add it to the request context.
-    #[serde(default)]
-    pub json_request: bool,
 
     #[serde(default)]
     pub processors: Vec<Processor>,
@@ -98,6 +93,8 @@ impl Deceit {
 /// Context for output renderers and pre/post processors as well.
 #[derive(Clone)]
 pub struct DeceitResponseContext {
+    pub method: String,
+
     pub path: Arc<String>,
 
     pub headers: Arc<HashMap<String, String>>,
@@ -106,15 +103,39 @@ pub struct DeceitResponseContext {
 
     pub path_args: Arc<HashMap<String, String>>,
 
-    /// TODO: maybe should wrap it in another structure
-    pub request_json: Arc<Option<serde_json::Value>>,
-
     pub response_code: Arc<AtomicU16>,
 
     pub counters: ApateCounters,
 
-    // TODO: maybe should remove minijinja state from response context
-    pub minijinja: MiniJinjaState,
+    pub request_body: Arc<Bytes>,
+
+    #[allow(clippy::type_complexity)]
+    pub request_json: Arc<Mutex<Option<Result<Arc<serde_json::Value>, String>>>>,
+}
+
+impl DeceitResponseContext {
+    pub fn load_request_json(&self) -> Result<Arc<serde_json::Value>, String> {
+        let mut guard = self
+            .request_json
+            .lock()
+            .expect("WTF stuff. No multithread access here expected.");
+
+        if let Some(value) = (*guard).as_ref() {
+            return value.clone();
+        }
+
+        let body = String::from_utf8_lossy(&self.request_body);
+        if body.trim().is_empty() {
+            return Ok(Arc::new(serde_json::Value::Null));
+        }
+        let json_value = serde_json::from_slice::<serde_json::Value>(body.as_bytes())
+            .map(Arc::new)
+            .map_err(|e| format!("{e}"));
+
+        *guard = Some(json_value.clone());
+
+        json_value
+    }
 }
 
 #[derive(Clone, Debug, Default, Deserialize, Serialize)]
@@ -133,37 +154,27 @@ pub struct DeceitResponse {
     #[serde(default)]
     pub processors: Vec<Processor>,
 
-    #[serde(default)]
+    #[serde(default, rename = "type")]
     pub output_type: OutputType,
 
     #[serde(default)]
     pub output: String,
 }
 
-pub fn create_responce_context(
-    deceit: &Deceit,
+pub fn create_response_context(
     ctx: RequestContext,
     cnt: ApateCounters,
-    minijinja: MiniJinjaState,
 ) -> color_eyre::Result<DeceitResponseContext> {
-    let request_json = if deceit.json_request && !ctx.body.trim_ascii().is_empty() {
-        let body = String::from_utf8_lossy(&ctx.body);
-        Some(serde_json::from_slice::<serde_json::Value>(
-            body.as_bytes(),
-        )?)
-    } else {
-        None
-    };
-
     Ok(DeceitResponseContext {
+        method: ctx.method.clone(),
         path: ctx.request_path.clone(),
         headers: ctx.headers.clone(),
         query_args: ctx.query_args.clone(),
         path_args: ctx.path_args.clone(),
-        request_json: Arc::new(request_json),
+        request_json: Default::default(),
         response_code: Arc::new(AtomicU16::new(0)),
         counters: cnt,
-        minijinja,
+        request_body: ctx.body.clone(),
     })
 }
 
@@ -176,8 +187,6 @@ pub struct DeceitBuilder {
 
     processors: Vec<Processor>,
 
-    json_request: bool,
-
     responses: Vec<DeceitResponse>,
 }
 
@@ -188,7 +197,6 @@ impl DeceitBuilder {
             uris,
             headers: Vec::new(),
             matchers: Vec::new(),
-            json_request: false,
             responses: Vec::new(),
             processors: Vec::new(),
         }
@@ -199,7 +207,6 @@ impl DeceitBuilder {
             uris: self.uris,
             headers: self.headers,
             matchers: self.matchers,
-            json_request: self.json_request,
             processors: self.processors,
             responses: self.responses,
         }
@@ -235,11 +242,6 @@ impl DeceitBuilder {
 
     pub fn add_processor(mut self, processor: Processor) -> Self {
         self.processors.push(processor);
-        self
-    }
-
-    pub fn json_request(mut self, json_request: bool) -> Self {
-        self.json_request = json_request;
         self
     }
 

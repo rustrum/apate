@@ -174,7 +174,7 @@ Processors are defined using **Rhai script**. Rust processors available only for
 **Binary content** -  handle output string as a binary content in  HEX or Base64 formats.
 See examples [here](./examples/apate-specs-bin.toml).
 
-**Jinja (minijinja) templates** - respond with `output_type="jinja"` processed as a jinja template 
+**Jinja (minijinja) templates** - respond with `type="jinja"` processed as a jinja template 
 using [minijinja](https://docs.rs/minijinja/latest/minijinja) template engine.
 Template syntax documentation can be found [here](https://docs.rs/minijinja/latest/minijinja/syntax).
 See also [minijinja filters](https://docs.rs/minijinja/latest/minijinja/filters).
@@ -194,8 +194,6 @@ The more stupid/unstable/unusable external API is the more reasons for you to us
 
 ## TODO
 
-- remove cityhasher completely with template id generator
-- remove json_body property add context function instead to load body as json
 - add rhai scripting as output type
 
 ## License

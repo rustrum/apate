@@ -85,7 +85,6 @@ args = ["argumen1", "argument2"]
 
 
 [[deceit.responses]]
-type = "text"
 output = """
 {"message": "Rhai post processor is working"}
 """

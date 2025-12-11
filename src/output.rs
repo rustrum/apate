@@ -4,7 +4,11 @@ use std::sync::atomic::Ordering;
 use base64::Engine as _;
 use serde::{Deserialize, Serialize};
 
-use crate::{ResourceRef, deceit::DeceitResponseContext, jinja::MiniJinjaResponseContext};
+use crate::{
+    ResourceRef,
+    deceit::DeceitResponseContext,
+    jinja::{MiniJinjaState, build_tpl_context},
+};
 
 /// Define an approach how to handle `output` property from configuration.
 /// Result will be placed in HTTP response message body.
@@ -28,10 +32,11 @@ pub fn output_response_body(
     tp: OutputType,
     output: &str,
     ctx: &DeceitResponseContext,
+    mini_jinja_state: &MiniJinjaState,
 ) -> color_eyre::Result<Vec<u8>> {
     match tp {
         OutputType::String => Ok(output.as_bytes().to_vec()),
-        OutputType::Jinja => render_using_minijinja(deceit_ref, output, ctx),
+        OutputType::Jinja => render_using_minijinja(deceit_ref, output, ctx, mini_jinja_state),
         OutputType::Hex => {
             let hex_str = output.trim().strip_prefix("0x").unwrap_or(output).trim();
             Ok(hex::decode(hex_str)?)
@@ -44,6 +49,7 @@ pub fn render_using_minijinja(
     deceit_ref: &ResourceRef,
     template: &str,
     ctx: &DeceitResponseContext,
+    mini_jinja_state: &MiniJinjaState,
 ) -> color_eyre::Result<Vec<u8>> {
     // Old way no cache
     // let mut env = init_minijinja();
@@ -51,22 +57,8 @@ pub fn render_using_minijinja(
     // env.add_template(&tpl_id, template)?;
 
     let tpl_id = deceit_ref.to_resource_id("output");
-    ctx.minijinja.add_minijinja_template(&tpl_id, template)?;
-    let mut env = ctx.minijinja.get_minijinja();
-
-    let counters = ctx.counters.clone();
-    env.add_function(
-        "inc_counter",
-        move |key: &str| -> Result<u64, minijinja::Error> {
-            let value = counters.get_and_increment(key).map_err(|e| {
-                minijinja::Error::new(
-                    minijinja::ErrorKind::UndefinedError,
-                    format!("Can't get counter value for key \"{key}\". {e:?}"),
-                )
-            })?;
-            Ok(value)
-        },
-    );
+    mini_jinja_state.add_minijinja_template(&tpl_id, template)?;
+    let mut env = mini_jinja_state.get_minijinja();
 
     let force_response_code = ctx.response_code.clone();
     env.add_function("force_response_code", move |code: u16| {
@@ -74,7 +66,7 @@ pub fn render_using_minijinja(
     });
 
     let tpl = env.get_template(&tpl_id)?;
-    let jinja_ctx = MiniJinjaResponseContext::new(ctx);
+    let jinja_ctx = build_tpl_context(ctx.clone());
     let response = tpl
         .render(jinja_ctx)
         .map_err(|e| color_eyre::eyre::eyre!("Can't render minijinja template: {e}"))?;

@@ -16,7 +16,7 @@ use actix_web::{
 
 use crate::{
     ApateState, RequestContext, ResourceRef,
-    deceit::{DEFAULT_RESPONSE_CODE, create_responce_context},
+    deceit::{DEFAULT_RESPONSE_CODE, create_response_context},
     processors::apply_processors,
 };
 
@@ -63,12 +63,7 @@ async fn deceit_handler(req: HttpRequest, body: Bytes, state: Data<ApateState>) 
         // Here all matchers checks passed
         // Now we are processing response
         // At this point we can't skip to the next deceit anymore
-        let drctx = match create_responce_context(
-            d,
-            ctx.clone(),
-            state.counters.clone(),
-            state.minijinja.clone(),
-        ) {
+        let drctx = match create_response_context(ctx.clone(), state.counters.clone()) {
             Ok(ctx) => ctx,
             Err(e) => {
                 return HttpResponse::InternalServerError()
@@ -81,6 +76,7 @@ async fn deceit_handler(req: HttpRequest, body: Bytes, state: Data<ApateState>) 
             dresp.output_type,
             &dresp.output,
             &drctx,
+            &state.minijinja,
         );
 
         return match output_body {
