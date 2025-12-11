@@ -169,14 +169,14 @@ pub struct ApateCounters {
 }
 
 impl ApateCounters {
-    pub fn get_or_default(&self, key: &str) -> color_eyre::Result<Arc<AtomicU64>> {
+    pub fn get_or_default(&self, key: &str) -> color_eyre::Result<u64> {
         let mut counters = self
             .counters
             .write()
             .map_err(|e| color_eyre::eyre::eyre!("{e}"))?;
 
         let counter = counters.entry(key.to_string()).or_default();
-        Ok(counter.clone())
+        Ok(counter.load(std::sync::atomic::Ordering::SeqCst))
     }
 
     pub fn get_and_increment(&self, key: &str) -> color_eyre::Result<u64> {

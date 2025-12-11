@@ -17,13 +17,13 @@ This function force/overwrite response code for this request.
 {%- set _ = force_response_code(200) %}
 
 
-## get_counter("key")
+## inc_counter("key")
 
 By input key returns previous counter value and increment counter by one on each function call.
  
- - get_counter("test1"): {{ get_counter("test1") }}
- - get_counter("test2"): {{ get_counter("test2") }}
- - get_counter("test2") + 42: {{ get_counter("test2") + 42 }}
+ - inc_counter("test1"): {{ inc_counter("test1") }}
+ - inc_counter("test2"): {{ inc_counter("test2") }}
+ - inc_counter("test2") + 42: {{ inc_counter("test2") + 42 }}
 
 
 ## uuid_v4()

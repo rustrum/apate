@@ -3,11 +3,14 @@
 #[cfg(feature = "server")]
 mod admin;
 
+use std::sync::atomic::Ordering;
+
 #[cfg(feature = "server")]
 pub use admin::{ADMIN_API, admin_service_config};
 
 use actix_web::{
     HttpRequest, HttpResponse,
+    http::StatusCode,
     web::{Bytes, Data},
 };
 
@@ -87,6 +90,12 @@ async fn deceit_handler(req: HttpRequest, body: Bytes, state: Data<ApateState>) 
                     &state.rhai,
                 ) {
                     Ok(new_body) => {
+                        // This is where we are applying new status code
+                        if let Ok(code) =
+                            StatusCode::from_u16(drctx.response_code.load(Ordering::Relaxed))
+                        {
+                            hrb.status(code);
+                        }
                         if let Some(bts) = new_body {
                             hrb.body(bts)
                         } else {

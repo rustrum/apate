@@ -105,7 +105,7 @@ if args.is_empty() {
     print(`Provided args: ${args}`);
 }
 
-// You will not get a response if /rhai/glob?foo=none
+// You will not get a response if /rhai/match/ref?foo=none
 if ctx.load_query_args().foo == "none" {
     return false
 }

@@ -3,10 +3,7 @@
 
 use std::{
     collections::HashMap,
-    sync::{
-        Arc,
-        atomic::{AtomicU16, Ordering},
-    },
+    sync::{Arc, atomic::AtomicU16},
 };
 
 use actix_router::{Path, ResourceDef};
@@ -108,13 +105,14 @@ pub struct DeceitResponseContext {
 
     pub path_args: Arc<HashMap<String, String>>,
 
+    /// TODO: maybe should wrap it in another structure
     pub request_json: Arc<Option<serde_json::Value>>,
 
     pub response_code: Arc<AtomicU16>,
 
     pub counters: ApateCounters,
 
-    // TODO maybe should remove minijinja state from response context
+    // TODO: maybe should remove minijinja state from response context
     pub minijinja: MiniJinjaState,
 }
 
@@ -150,15 +148,7 @@ impl DeceitResponse {
         let output_body =
             crate::output::build_response_body(self.output_type, &self.output, drctx)?;
 
-        let response_code_from_tpl = drctx.response_code.load(Ordering::Relaxed);
-        let response_code = if response_code_from_tpl > 0 {
-            response_code_from_tpl
-        } else {
-            self.code.unwrap_or(DEFAULT_RESPONSE_CODE)
-        };
-
-        let mut hrb: HttpResponseBuilder =
-            HttpResponseBuilder::new(StatusCode::from_u16(response_code)?);
+        let mut hrb = HttpResponseBuilder::new(StatusCode::from_u16(DEFAULT_RESPONSE_CODE)?);
 
         insert_response_headers(&mut hrb, &deceit.headers, &self.headers);
 

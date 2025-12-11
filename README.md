@@ -15,8 +15,8 @@ Project named after Apate - the goddess and personification of deceit.
 
 ## Is it stable ?
 
-Yes it is!
-Only small changes and new features planned for future stable release v0.1.0.
+Yes it is! There could be some specs updates before v0.1.0 release.
+
 
 ## Features
 
@@ -167,26 +167,19 @@ Runs additional logic that can modify already prepared response body.
 Processors are defined using **Rhai script**. Rust processors available only for custom applications.
 
 
-### Response types
+### Output (response) types
 
-#### String (default)
+**String (default)** - returns string from specification as is.
 
-Simply returns string from specification as is.
-
-####  Binary content
-
-Can handle output string as a binary content in  HEX or Base64 formats.
+**Binary content** -  handle output string as a binary content in  HEX or Base64 formats.
 See examples [here](./examples/apate-specs-bin.toml).
 
-### Jinja (minijinja) templates
-
-Response with `output_type="jinja"` processed as a jinja template 
+**Jinja (minijinja) templates** - respond with `output_type="jinja"` processed as a jinja template 
 using [minijinja](https://docs.rs/minijinja/latest/minijinja) template engine.
 Template syntax documentation can be found [here](https://docs.rs/minijinja/latest/minijinja/syntax).
 See also [minijinja filters](https://docs.rs/minijinja/latest/minijinja/filters).
 
-Apate usage examples available in [this specs file](./examples/apate-template-specs.toml).
-
+**Rhai script** - in development now.
 
 ## Butt why do I really need Apate?
 
@@ -198,6 +191,12 @@ The more stupid/unstable/unusable external API is the more reasons for you to us
 - **integration tests** - if 3rd party API provider suck/stuck/etc it is better to run test suites against predictable API endpoints.
 - **load tests** - when deployed alongside your application Apate should respond fast, so no need to take external API delays into account.
 
+
+## TODO
+
+- remove cityhasher completely with template id generator
+- remove json_body property add context function instead to load body as json
+- add rhai scripting as output type
 
 ## License
 

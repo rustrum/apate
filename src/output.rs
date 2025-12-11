@@ -136,7 +136,7 @@ pub fn prepare_jinja_output(
 
     let counters = ctx.counters.clone();
     env.add_function(
-        "get_counter",
+        "inc_counter",
         move |key: &str| -> Result<u64, minijinja::Error> {
             let value = counters.get_and_increment(key).map_err(|e| {
                 minijinja::Error::new(

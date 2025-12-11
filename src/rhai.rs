@@ -1,10 +1,12 @@
 use std::{
     collections::HashMap,
-    sync::{Arc, RwLock},
+    sync::{Arc, RwLock, atomic::Ordering},
 };
 
 use actix_web::web::Bytes;
-use rhai::{AST, Blob, Engine, Map as RhaiMap, ParseError, ParseErrorType, Position};
+use rhai::{
+    AST, Blob, Engine, EvalAltResult, Map as RhaiMap, ParseError, ParseErrorType, Position,
+};
 use serde::{Deserialize, Serialize};
 
 use crate::{RequestContext, deceit::DeceitResponseContext};
@@ -16,7 +18,6 @@ pub struct RhaiScript {
     pub script: String,
 }
 
-/// TODO implement properly
 #[derive(Clone)]
 pub struct RhaiState {
     engine: Arc<Engine>,
@@ -98,6 +99,15 @@ impl RhaiState {
     }
 }
 
+/// Context available in Rhai matchers under `ctx` variable.
+///
+/// Expose next API:
+///  - ctx.method -> returns request method
+///  - ctx.path -> returns request path
+///  - ctx.load_header() -> build request headers map (lowercase keys)
+///  - ctx.load_query_args() -> build map with URL query arguments
+///  - ctx.load_path_args() -> build arguments map from specs URIs like /mypath/{user_id}/{item_id}
+///  - ctx.load_body() -> reads request body as Blob
 #[derive(Debug, Clone)]
 pub struct RhaiRequestContext {
     pub method: String,
@@ -157,6 +167,13 @@ impl From<RequestContext> for RhaiRequestContext {
     }
 }
 
+/// Context available in Rhai processors under `ctx` variable.
+///
+/// Expose next API:
+///  - ctx.path -> returns request path
+///  - ctx.load_header() -> build request headers map (lowercase keys)
+///  - ctx.load_query_args() -> build map with URL query arguments
+///  - ctx.load_path_args() -> build arguments map from specs URIs like /mypath/{user_id}/{item_id}
 #[derive(Clone)]
 pub struct RhaiResponseContext {
     ctx: DeceitResponseContext,
@@ -171,6 +188,25 @@ impl From<DeceitResponseContext> for RhaiResponseContext {
 impl RhaiResponseContext {
     pub fn get_path(&mut self) -> String {
         self.ctx.path.to_string()
+    }
+
+    pub fn get_response_code(&mut self) -> i64 {
+        self.ctx.response_code.load(Ordering::Relaxed) as i64
+    }
+
+    pub fn set_response_code(&mut self, value: i64) {
+        self.ctx
+            .response_code
+            .store(value as u16, Ordering::Relaxed);
+    }
+
+    pub fn inc_counter(&mut self, key: &str) -> Result<u64, Box<EvalAltResult>> {
+        self.ctx.counters.get_and_increment(key).map_err(|e| {
+            Box::new(EvalAltResult::ErrorSystem(
+                "Failed inc_counter".to_string(),
+                e.into(),
+            ))
+        })
     }
 
     pub fn load_headers(&mut self) -> RhaiMap {
@@ -221,6 +257,12 @@ fn build_rhai_engine() -> Engine {
     engine
         .register_type::<RhaiResponseContext>()
         .register_get("path", RhaiResponseContext::get_path)
+        .register_fn("inc_counter", RhaiResponseContext::inc_counter)
+        .register_get_set(
+            "response_code",
+            RhaiResponseContext::get_response_code,
+            RhaiResponseContext::set_response_code,
+        )
         .register_fn("load_headers", RhaiResponseContext::load_headers)
         .register_fn("load_query_args", RhaiResponseContext::load_query_args)
         .register_fn("load_path_args", RhaiResponseContext::load_path_args);
