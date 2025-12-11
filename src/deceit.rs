@@ -7,19 +7,20 @@ use std::{
 };
 
 use actix_router::{Path, ResourceDef};
-use actix_web::{HttpResponseBuilder, http::StatusCode};
+use actix_web::http::StatusCode;
 
 use serde::{Deserialize, Serialize};
 
 use crate::{
     ApateConfig, ApateCounters, RequestContext, ResourceRef,
+    jinja::MiniJinjaState,
     matchers::{Matcher, matchers_and},
-    output::{MiniJinjaState, OutputType},
+    output::OutputType,
     processors::Processor,
     rhai::RhaiState,
 };
 
-const DEFAULT_RESPONSE_CODE: u16 = 200;
+pub const DEFAULT_RESPONSE_CODE: StatusCode = StatusCode::OK;
 
 /// Specification unit that applies to one or several URI paths.
 #[derive(Clone, Debug, Default, Deserialize, Serialize)]
@@ -139,23 +140,6 @@ pub struct DeceitResponse {
     pub output: String,
 }
 
-impl DeceitResponse {
-    pub fn prepare(
-        &self,
-        deceit: &Deceit,
-        drctx: &DeceitResponseContext,
-    ) -> color_eyre::Result<(HttpResponseBuilder, Vec<u8>)> {
-        let output_body =
-            crate::output::build_response_body(self.output_type, &self.output, drctx)?;
-
-        let mut hrb = HttpResponseBuilder::new(StatusCode::from_u16(DEFAULT_RESPONSE_CODE)?);
-
-        insert_response_headers(&mut hrb, &deceit.headers, &self.headers);
-
-        Ok((hrb, output_body))
-    }
-}
-
 pub fn create_responce_context(
     deceit: &Deceit,
     ctx: RequestContext,
@@ -181,19 +165,6 @@ pub fn create_responce_context(
         counters: cnt,
         minijinja,
     })
-}
-
-fn insert_response_headers(
-    rbuilder: &mut HttpResponseBuilder,
-    parent_headers: &[(String, String)],
-    headers: &[(String, String)],
-) {
-    for (k, v) in parent_headers {
-        rbuilder.insert_header((k.as_str(), v.as_str()));
-    }
-    for (k, v) in headers {
-        rbuilder.insert_header((k.as_str(), v.as_str()));
-    }
 }
 
 pub struct DeceitBuilder {

@@ -1,5 +1,6 @@
 pub mod deceit;
 mod handlers;
+pub mod jinja;
 pub mod matchers;
 pub mod output;
 pub mod processors;
@@ -25,7 +26,7 @@ use actix_web::{
 use async_lock::RwLock;
 use serde::{Deserialize, Serialize};
 
-use crate::output::MiniJinjaState;
+use crate::jinja::MiniJinjaState;
 use crate::processors::ApateProcessor;
 use crate::rhai::{RhaiScript, RhaiState};
 

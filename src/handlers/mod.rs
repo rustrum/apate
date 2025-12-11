@@ -9,13 +9,14 @@ use std::sync::atomic::Ordering;
 pub use admin::{ADMIN_API, admin_service_config};
 
 use actix_web::{
-    HttpRequest, HttpResponse,
+    HttpRequest, HttpResponse, HttpResponseBuilder,
     http::StatusCode,
     web::{Bytes, Data},
 };
 
 use crate::{
-    ApateState, RequestContext, ResourceRef, deceit::create_responce_context,
+    ApateState, RequestContext, ResourceRef,
+    deceit::{DEFAULT_RESPONSE_CODE, create_responce_context},
     processors::apply_processors,
 };
 
@@ -54,7 +55,7 @@ async fn deceit_handler(req: HttpRequest, body: Bytes, state: Data<ApateState>) 
 
         log::debug!("Deceit {deceit_ref} matched (^_^). Processing response: {idx}");
 
-        let Some(response) = d.responses.get(idx) else {
+        let Some(dresp) = d.responses.get(idx) else {
             log::error!("Wow we definitely must have response for this index {idx}");
             continue;
         };
@@ -75,11 +76,18 @@ async fn deceit_handler(req: HttpRequest, body: Bytes, state: Data<ApateState>) 
             }
         };
 
-        return match response.prepare(d, &drctx) {
-            Ok((mut hrb, body)) => {
-                let mut prcs = Vec::with_capacity(d.processors.len() + response.processors.len());
+        let output_body = crate::output::output_response_body(
+            &deceit_ref,
+            dresp.output_type,
+            &dresp.output,
+            &drctx,
+        );
+
+        return match output_body {
+            Ok(body) => {
+                let mut prcs = Vec::with_capacity(d.processors.len() + dresp.processors.len());
                 prcs.extend(d.processors.iter());
-                prcs.extend(response.processors.iter());
+                prcs.extend(dresp.processors.iter());
 
                 match apply_processors(
                     &deceit_ref,
@@ -90,12 +98,15 @@ async fn deceit_handler(req: HttpRequest, body: Bytes, state: Data<ApateState>) 
                     &state.rhai,
                 ) {
                     Ok(new_body) => {
-                        // This is where we are applying new status code
+                        let mut hrb = HttpResponseBuilder::new(DEFAULT_RESPONSE_CODE);
+                        insert_response_headers(&mut hrb, &d.headers, &dresp.headers);
                         if let Ok(code) =
                             StatusCode::from_u16(drctx.response_code.load(Ordering::Relaxed))
                         {
+                            // This is where we are applying new status code
                             hrb.status(code);
                         }
+
                         if let Some(bts) = new_body {
                             hrb.body(bts)
                         } else {
@@ -114,4 +125,34 @@ async fn deceit_handler(req: HttpRequest, body: Bytes, state: Data<ApateState>) 
         "Nothing can handle your requiest with path: {}\n",
         ctx.request_path
     ))
+}
+
+/* impl DeceitResponse {
+    pub fn prepare(
+        &self,
+        deceit: &Deceit,
+        drctx: &DeceitResponseContext,
+    ) -> color_eyre::Result<(HttpResponseBuilder, Vec<u8>)> {
+        let output_body =
+            crate::output::build_response_body(self.output_type, &self.output, drctx)?;
+
+        let mut hrb = HttpResponseBuilder::new(StatusCode::from_u16(DEFAULT_RESPONSE_CODE)?);
+
+        insert_response_headers(&mut hrb, &deceit.headers, &self.headers);
+
+        Ok((hrb, output_body))
+    }
+} */
+
+fn insert_response_headers(
+    rbuilder: &mut HttpResponseBuilder,
+    parent_headers: &[(String, String)],
+    headers: &[(String, String)],
+) {
+    for (k, v) in parent_headers {
+        rbuilder.insert_header((k.as_str(), v.as_str()));
+    }
+    for (k, v) in headers {
+        rbuilder.insert_header((k.as_str(), v.as_str()));
+    }
 }
