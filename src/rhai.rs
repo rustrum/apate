@@ -4,7 +4,7 @@ use std::{
 };
 
 use rhai::{
-    AST, Blob, Engine, EvalAltResult, Map as RhaiMap, ParseError, ParseErrorType, Position,
+    AST, Blob, Dynamic, Engine, EvalAltResult, Map as RhaiMap, ParseError, ParseErrorType, Position,
 };
 use serde::{Deserialize, Serialize};
 
@@ -241,11 +241,14 @@ impl RhaiResponseContext {
 fn build_rhai_engine() -> Engine {
     let mut engine = Engine::new();
 
-    engine.on_print(move |s| {
+    engine.register_fn("to_json_blob", to_json_blob);
+    engine.register_fn("from_json_blob", from_json_blob);
+
+    engine.on_print(|s| {
         log::info!("RHAI: {s}");
     });
 
-    engine.on_debug(move |s, src, pos| {
+    engine.on_debug(|s, src, pos| {
         log::debug!("RHAI: {} @ {pos:?} > {s}", src.unwrap_or_default());
     });
 
@@ -274,4 +277,24 @@ fn build_rhai_engine() -> Engine {
         .register_fn("load_body", RhaiResponseContext::load_body);
 
     engine
+}
+
+fn to_json_blob(value: &mut Dynamic) -> Result<Blob, Box<EvalAltResult>> {
+    serde_json::to_string(value)
+        .map_err(|e| {
+            Box::new(EvalAltResult::ErrorSystem(
+                "Can't convert to JSON string".to_string(),
+                Box::new(e),
+            ))
+        })
+        .map(Blob::from)
+}
+
+fn from_json_blob(value: &mut Blob) -> Result<Dynamic, Box<EvalAltResult>> {
+    serde_json::from_slice::<Dynamic>(value).map_err(|e| {
+        Box::new(EvalAltResult::ErrorSystem(
+            "Can't decode JSON from bytes".to_string(),
+            Box::new(e),
+        ))
+    })
 }

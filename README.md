@@ -12,9 +12,9 @@ API mocking server that main purpose is to help with integration and end-to-end 
 Project named after Apate - the goddess and personification of deceit.
 
 
-## It is stable ?
+## It is stable and ready to use 🚀
 
-Only small updates expected than I will move it to v0.1.0 release that will be very stable.
+Just some small changes expected. Then I will move it to v0.1.0 release and will wait for user feedback.
 
 
 ## Features
@@ -188,10 +188,6 @@ See also [minijinja filters](https://docs.rs/minijinja/latest/minijinja/filters)
 
 **Rhai script** - Similar to minijinja you can use Rhai script to generate content. See examples [here](./examples/apate-specs-rhai.toml).
 
-
-## TODO
-
-- add global functions to de/serialize from JSON could add additional capabilities to rhai scripting like having post processors to filter data in JSON list from the string output.
 
 ## License
 

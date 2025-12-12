@@ -29,6 +29,7 @@ pub enum Processor {
     },
     RhaiRef {
         id: String,
+        #[serde(default)]
         args: Vec<String>,
     },
     /// References to custom embedded rust user processor.

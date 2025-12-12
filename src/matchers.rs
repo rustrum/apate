@@ -73,6 +73,7 @@ pub enum Matcher {
 
     RhaiRef {
         id: String,
+        #[serde(default)]
         args: Vec<String>,
     },
 }

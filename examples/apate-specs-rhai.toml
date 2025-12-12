@@ -1,4 +1,29 @@
 #
+# The most useful example that combines features described below.
+# Basically we using template output as raw JSON source 
+# that is filtered by shared post processor based on query string arguments.
+# /rhai/search?surname=Ivanov - will return only records with this surname.
+#
+[[deceit]]
+uris = ["/rhai/search"]
+headers = [["Content-Type", "application/json"]]
+
+[[deceit.responses]]
+output = """
+[
+{ "name": "Ivan", "surname": "Ivanov"},
+{ "name": "Adolph", "surname": "Gupta"},
+{ "name": "John", "surname": "Smith"},
+{ "name": "Ivan", "surname": "Smith"},
+{ "name": "Adolph", "surname": "Ivanov"}
+]
+"""
+
+[[deceit.processors]]
+type = "rhai_ref"
+id = "rhai-filter"
+
+#
 # Rhai as a template engine
 #
 [[deceit]]
@@ -28,15 +53,9 @@ if "surname" in q {
     data = data.filter(|rec| rec.surname == q["surname"]);
 }
 
-// Constructing json from list a little bit tricky
-let result = data.map(|v| v.to_json()).reduce(|acc, rec| acc + "\\n" + rec + ",", "");
-if result.ends_with(",") {
-    result.pop();
-}
-
-return ("[" + result + "\\n]").to_blob();
+// This is custom funtion that converts Rhai type to json blob
+return to_json_blob(data);
 """
-
 
 #
 # Rhai as a matcher
@@ -182,4 +201,25 @@ json_map.post_ref = `Map len() returned ${fields_count}`;
 json_map.args = args;
 
 return json_map.to_json().to_blob();
+"""
+
+
+[[rhai]]
+id = "rhai-filter"
+script= """
+let data = from_json_blob(body);
+
+let query = ctx.load_query_args();
+for arg in query.keys() {
+    data = data.filter(|rec| {
+        if arg in rec {
+            rec[arg].to_lower() == query[arg].to_lower()
+        } else {
+            false
+        }
+    });
+}
+
+// This is custom funtion that converts Rhai type to json blob
+return to_json_blob(data);
 """
