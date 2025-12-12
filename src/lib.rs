@@ -410,16 +410,24 @@ impl Display for ResourceRef {
 #[cfg(test)]
 mod tests {
 
+    use include_dir::{Dir, include_dir};
+
     use super::*;
 
-    const TOML_TEST: &str = include_str!("../examples/apate-specs.toml");
+    const EXAMPLES: Dir = include_dir!("$CARGO_MANIFEST_DIR/examples");
 
-    /// Just checking that examples toml is valid
     #[test]
-    fn deserialize_examples_toml() {
-        let specs: ApateSpecs = toml::from_str(TOML_TEST).unwrap();
-
-        // The coolest debug approach ever
-        println!("{specs:#?}");
+    fn check_examples_toml() {
+        for file in EXAMPLES.files() {
+            if file
+                .path()
+                .to_string_lossy()
+                .to_lowercase()
+                .ends_with(".toml")
+            {
+                let specs = toml::from_slice::<ApateSpecs>(file.contents());
+                assert!(specs.is_ok(), "{:?} -> {specs:?}", file.path());
+            }
+        }
     }
 }

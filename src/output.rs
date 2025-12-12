@@ -2,12 +2,15 @@
 use std::sync::atomic::Ordering;
 
 use base64::Engine as _;
+use color_eyre::eyre::{bail, eyre};
+use rhai::{AST, Blob, Dynamic, Engine, Scope};
 use serde::{Deserialize, Serialize};
 
 use crate::{
     ResourceRef,
     deceit::DeceitResponseContext,
     jinja::{MiniJinjaState, build_tpl_context},
+    rhai::{RhaiResponseContext, RhaiState},
 };
 
 /// Define an approach how to handle `output` property from configuration.
@@ -25,6 +28,8 @@ pub enum OutputType {
     // #[serde(rename = "base64")]
     /// Handle output as binary data that will be decoded from Base64 string.
     Base64,
+    /// Output is a Rhai script
+    Rhai,
 }
 
 pub fn output_response_body(
@@ -33,6 +38,7 @@ pub fn output_response_body(
     output: &str,
     ctx: &DeceitResponseContext,
     mini_jinja_state: &MiniJinjaState,
+    rhai_state: &RhaiState,
 ) -> color_eyre::Result<Vec<u8>> {
     match tp {
         OutputType::String => Ok(output.as_bytes().to_vec()),
@@ -42,10 +48,11 @@ pub fn output_response_body(
             Ok(hex::decode(hex_str)?)
         }
         OutputType::Base64 => Ok(base64::prelude::BASE64_STANDARD.decode(output.trim())?),
+        OutputType::Rhai => render_using_rhai(deceit_ref, output, ctx, rhai_state),
     }
 }
 
-pub fn render_using_minijinja(
+fn render_using_minijinja(
     deceit_ref: &ResourceRef,
     template: &str,
     ctx: &DeceitResponseContext,
@@ -56,8 +63,8 @@ pub fn render_using_minijinja(
     // let tpl_id = template_id(template);
     // env.add_template(&tpl_id, template)?;
 
-    let tpl_id = deceit_ref.to_resource_id("output");
-    mini_jinja_state.add_minijinja_template(&tpl_id, template)?;
+    let id = deceit_ref.to_resource_id("jinja-output");
+    mini_jinja_state.add_minijinja_template(&id, template)?;
     let mut env = mini_jinja_state.get_minijinja();
 
     let force_response_code = ctx.response_code.clone();
@@ -65,11 +72,45 @@ pub fn render_using_minijinja(
         force_response_code.store(code, Ordering::Relaxed);
     });
 
-    let tpl = env.get_template(&tpl_id)?;
+    let tpl = env.get_template(&id)?;
     let jinja_ctx = build_tpl_context(ctx.clone());
     let response = tpl
         .render(jinja_ctx)
-        .map_err(|e| color_eyre::eyre::eyre!("Can't render minijinja template: {e}"))?;
+        .map_err(|e| eyre!("Can't render minijinja template: {e}"))?;
 
     Ok(response.into_bytes())
+}
+
+fn render_using_rhai(
+    deceit_ref: &ResourceRef,
+    script: &str,
+    ctx: &DeceitResponseContext,
+    rhai: &RhaiState,
+) -> color_eyre::Result<Vec<u8>> {
+    let id = deceit_ref.to_resource_id("rhai-output");
+
+    let (engine, ast) = rhai
+        .get_exec(id.clone(), script)
+        .map_err(|e| eyre!("Can't load Rhai template: {e:?}"))?;
+
+    call_rhai(&engine, &ast, ctx.clone().into())
+}
+
+fn call_rhai(engine: &Engine, ast: &AST, ctx: RhaiResponseContext) -> color_eyre::Result<Vec<u8>> {
+    let mut scope = Scope::new();
+    scope.set_value("ctx", ctx);
+
+    let result = engine.eval_ast_with_scope::<Dynamic>(&mut scope, ast)?;
+
+    let value = if result.is_unit() {
+        Default::default()
+    } else if result.is_blob() {
+        result
+            .try_cast_result::<Blob>()
+            .map_err(|e| eyre!("Must not happen here {e:?}"))?
+    } else {
+        bail!("Wrong Rhai template return type: {}", result.type_name());
+    };
+
+    Ok(value)
 }

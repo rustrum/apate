@@ -1,3 +1,46 @@
+#
+# Rhai as a template engine
+#
+[[deceit]]
+uris = ["/rhai/list"]
+headers = [["Content-Type", "application/json"]]
+
+# Rhai template is very similar to processor but it has only `ctx` glob variable.
+# I found rhai even more convenient that minijinja in some cases
+[[deceit.responses]]
+type = "rhai"
+output = """
+let data = [
+    #{ name: "Ivan", surname: "Ivanov"},
+    #{ name: "Adolph", surname: "Gupta"},
+    #{ name: "John", surname: "Smith"},
+    #{ name: "Ivan", surname: "Smith"},
+    #{ name: "Adolph", surname: "Ivanov"}
+];
+
+let q = ctx.load_query_args();
+
+if "name" in q {
+    data = data.filter(|rec| rec.name == q["name"]);
+}
+
+if "surname" in q {
+    data = data.filter(|rec| rec.surname == q["surname"]);
+}
+
+// Constructing json from list a little bit tricky
+let result = data.map(|v| v.to_json()).reduce(|acc, rec| acc + "\\n" + rec + ",", "");
+if result.ends_with(",") {
+    result.pop();
+}
+
+return ("[" + result + "\\n]").to_blob();
+"""
+
+
+#
+# Rhai as a matcher
+#
 [[deceit]]
 uris = ["/rhai/match"]
 headers = [["Content-Type", "application/json"]]
@@ -39,6 +82,10 @@ output = """
 {"message": "Rhai inline matcher is OK"},
 """
 
+
+#
+# Rhai matcher reusable script
+#
 [[deceit]]
 uris = ["/rhai/match/ref"]
 headers = [["Content-Type", "application/json"]]
@@ -55,10 +102,18 @@ output = """
 {"message": "Rhai top level matcher is OK"}
 """
 
-
+#
+# Rhai as a processor srcipt
+# Basically it is the same as a template script but with additional context
+#
 [[deceit]]
 uris = ["/rhai/post"]
 headers = [["Content-Type", "application/json"]]
+
+[[deceit.responses]]
+output = """
+{"message": "Rhai post processor is working"}
+"""
 
 # This time we use global Rhai script definition (for reusability purpose)
 # You can address global script by ID in any matcher and provide some custom input for it
@@ -73,6 +128,8 @@ script = """
 let json_map = parse_json(body.as_string());
 json_map.post = "hello from script post processor";
 
+// Post processor return is mandatory.
+// You can skip if you wan to have original response
 return json_map.to_json().to_blob();
 """
 
@@ -84,13 +141,10 @@ id = "rhai-post-processor"
 args = ["argumen1", "argument2"]
 
 
-[[deceit.responses]]
-output = """
-{"message": "Rhai post processor is working"}
-"""
-
-
-# This is our global Rhai scripts definitions
+#
+# Reusable Rhai scripts registry
+# This could be processor or matcher that references by IN in specs
+#
 [[rhai]]
 id = "top-level-script"
 script = """
@@ -112,7 +166,6 @@ if ctx.load_query_args().foo == "none" {
 return true
 """
 
-
 [[rhai]]
 id = "rhai-post-processor"
 script = """
@@ -130,4 +183,3 @@ json_map.args = args;
 
 return json_map.to_json().to_blob();
 """
-

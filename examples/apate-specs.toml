@@ -85,6 +85,7 @@ output = """
 
 [[deceit.responses]]
 code = 406
+# Blocking adding any Adolph Hitler into our DB :)
 matchers = [
     { type = "json", path = "$.name", eq = "Adolph" },
     { type = "json", path = "$.surname", eq = "Hitler" },

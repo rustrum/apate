@@ -31,10 +31,7 @@ jsonpath-rust = "1.0"
 log = "0.4"
 minijinja = { version = "2.12.0", features = ["loader", "json"] }
 rand = "0.9"
-rhai = { version = "1.23", features = [
-    "sync",
-    "no_custom_syntax",
-] }
+rhai = { version = "1.23", features = ["sync", "no_custom_syntax"] }
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
 serde_urlencoded = "0.7"
@@ -47,5 +44,6 @@ getopt3 = { version = "2.5.0", optional = true }
 include_dir = { version = "0.7", optional = true }
 
 [dev-dependencies]
+include_dir = { version = "0.7" }
 reqwest = { version = "0.12", features = ["json", "blocking"] }
 serial_test = "3"

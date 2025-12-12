@@ -3,7 +3,6 @@ use std::{
     sync::{Arc, RwLock, atomic::Ordering},
 };
 
-use actix_web::web::Bytes;
 use rhai::{
     AST, Blob, Engine, EvalAltResult, Map as RhaiMap, ParseError, ParseErrorType, Position,
 };
@@ -110,72 +109,64 @@ impl RhaiState {
 ///  - ctx.load_body() -> reads request body as Blob
 #[derive(Debug, Clone)]
 pub struct RhaiRequestContext {
-    pub method: String,
-    pub headers: Arc<HashMap<String, String>>,
-    pub body: Arc<Bytes>,
-    pub path: Arc<String>,
-    pub args_query: Arc<HashMap<String, String>>,
-    pub args_path: Arc<HashMap<String, String>>,
+    pub req: RequestContext,
 }
 
 impl RhaiRequestContext {
     pub fn get_method(&mut self) -> String {
-        self.method.clone()
+        self.req.method.clone()
     }
 
     pub fn get_path(&mut self) -> String {
-        self.path.as_ref().clone()
+        self.req.path.as_ref().clone()
     }
 
     pub fn load_headers(&mut self) -> RhaiMap {
-        self.headers
+        self.req
+            .headers
             .iter()
             .map(|(k, v)| (k.into(), v.into()))
             .collect()
     }
 
     pub fn load_path_args(&mut self) -> RhaiMap {
-        self.args_path
+        self.req
+            .path_args
             .iter()
             .map(|(k, v)| (k.into(), v.into()))
             .collect()
     }
 
     pub fn load_query_args(&mut self) -> RhaiMap {
-        self.args_query
+        self.req
+            .query_args
             .iter()
             .map(|(k, v)| (k.into(), v.into()))
             .collect()
     }
 
     pub fn load_body(&mut self) -> Blob {
-        Blob::from(self.body.to_vec())
+        Blob::from(self.req.body.to_vec())
     }
 }
 
 impl From<RequestContext> for RhaiRequestContext {
     fn from(ctx: RequestContext) -> Self {
-        let path = Arc::new(ctx.path.as_str().to_string());
-        Self {
-            method: ctx.method.clone(),
-            headers: ctx.headers.clone(),
-            body: ctx.body.clone(),
-            path,
-            args_query: ctx.query_args.clone(),
-            args_path: ctx.path_args.clone(),
-        }
+        Self { req: ctx.clone() }
     }
 }
 
 /// Context available in Rhai processors under `ctx` variable.
 ///
 /// Expose next API:
+///  - ctx.method -> returns request method
 ///  - ctx.path -> returns request path
 ///  - ctx.response_code -> get set custom response code if any (default 0 if not set)
-///  - ctx.inc_counter("key") -> increment counter by key and returns previous value
 ///  - ctx.load_headers() -> build request headers map (lowercase keys)
 ///  - ctx.load_query_args() -> build map with URL query arguments
 ///  - ctx.load_path_args() -> build arguments map from specs URIs like /mypath/{user_id}/{item_id}
+///  - ctx.load_body() -> reads request body as Blob
+///  - ctx.inc_counter("key") -> increment counter by key and returns previous value
 #[derive(Clone)]
 pub struct RhaiResponseContext {
     ctx: DeceitResponseContext,
@@ -188,6 +179,10 @@ impl From<DeceitResponseContext> for RhaiResponseContext {
 }
 
 impl RhaiResponseContext {
+    pub fn get_method(&mut self) -> String {
+        self.ctx.req.method.to_string()
+    }
+
     pub fn get_path(&mut self) -> String {
         self.ctx.req.path.to_string()
     }
@@ -237,6 +232,10 @@ impl RhaiResponseContext {
             .map(|(k, v)| (k.into(), v.into()))
             .collect()
     }
+
+    pub fn load_body(&mut self) -> Blob {
+        Blob::from(self.ctx.req.body.to_vec())
+    }
 }
 
 fn build_rhai_engine() -> Engine {
@@ -261,6 +260,7 @@ fn build_rhai_engine() -> Engine {
 
     engine
         .register_type::<RhaiResponseContext>()
+        .register_get("method", RhaiResponseContext::get_method)
         .register_get("path", RhaiResponseContext::get_path)
         .register_fn("inc_counter", RhaiResponseContext::inc_counter)
         .register_get_set(
@@ -270,7 +270,8 @@ fn build_rhai_engine() -> Engine {
         )
         .register_fn("load_headers", RhaiResponseContext::load_headers)
         .register_fn("load_query_args", RhaiResponseContext::load_query_args)
-        .register_fn("load_path_args", RhaiResponseContext::load_path_args);
+        .register_fn("load_path_args", RhaiResponseContext::load_path_args)
+        .register_fn("load_body", RhaiResponseContext::load_body);
 
     engine
 }

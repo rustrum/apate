@@ -192,8 +192,7 @@ pub fn match_header(key: &str, value: &str, ctx: &RequestContext) -> bool {
 }
 
 pub fn match_json(path: &str, value: &str, ctx: &RequestContext) -> bool {
-    let body = String::from_utf8_lossy(&ctx.body);
-    let json = match serde_json::from_slice::<serde_json::Value>(body.as_bytes()) {
+    let json = match ctx.load_body_as_json() {
         Ok(json) => json,
         Err(e) => {
             log::error!("Can't parse request as JSON {e}");

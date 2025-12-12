@@ -46,11 +46,47 @@ const REF_SCRIPT: &str = r#"
 let body = body.as_string();
 let map = #{ 
     output: body,
+    method: ctx.method,
     path: ctx.path,
     args: args,
     counter: ctx.inc_counter("cnt"),
 };
 
+let req_body = ctx.load_body();
+if !req_body.is_empty() {
+    map.body = req_body.as_string();
+}
+let pargs = ctx.load_path_args();
+if "name" in pargs {
+    map.pname = pargs["name"];
+    if pargs.name == "java" {
+        return ();
+    }
+}
+
+let qargs = ctx.load_query_args();
+if "name" in qargs {
+    map.qname = qargs.name;
+    if qargs.name == "rhai" {
+        ctx.response_code = 201;
+    }
+}
+
+return map.to_json().to_blob();
+"#;
+
+/// Basically same logic as in processor but loaded into a template
+const TEMPLATE_SCRIPT: &str = r#"
+let map = #{ 
+    method: ctx.method,
+    path: ctx.path,
+    counter: ctx.inc_counter("cnt"),
+};
+
+let req_body = ctx.load_body();
+if !req_body.is_empty() {
+    map.body = req_body.as_string();
+}
 let pargs = ctx.load_path_args();
 if "name" in pargs {
     map.pname = pargs["name"];
@@ -98,6 +134,16 @@ fn build_config() -> ApateConfig {
                 .add_response(
                     DeceitResponseBuilder::default()
                         .with_output(r#"It is .k"#)
+                        .build(),
+                )
+                .build(),
+        )
+        .add_deceit(
+            DeceitBuilder::with_uris(&["/tpl", "/tpl/{name}"])
+                .add_response(
+                    DeceitResponseBuilder::default()
+                        .with_output_type(apate::output::OutputType::Rhai)
+                        .with_output(TEMPLATE_SCRIPT)
                         .build(),
                 )
                 .build(),
@@ -188,7 +234,7 @@ async fn test_rhai_ref_matcher() {
     // basic stuff
     let response = client.post(api_url("/processor")).send().await.unwrap();
     let jval: serde_json::Value = response.json().await.unwrap();
-    json_basic_assert(&jval, "/processor", 0);
+    processor_json_basic_assert(&jval, "POST", "/processor", 0);
 
     // No return
     let response = client.post(api_url("/process/java")).send().await.unwrap();
@@ -196,25 +242,31 @@ async fn test_rhai_ref_matcher() {
     assert_eq!(text, "It is .k");
 
     // path args
-    let response = client.post(api_url("/process/rhai")).send().await.unwrap();
+    let response = client
+        .post(api_url("/process/rhai"))
+        .body("REQUEST_BODY")
+        .send()
+        .await
+        .unwrap();
     let jval: serde_json::Value = response.json().await.unwrap();
-    json_basic_assert(&jval, "/process/rhai", 2);
+    processor_json_basic_assert(&jval, "POST", "/process/rhai", 2);
     assert_eq!(jval.get("pname").unwrap().as_str().unwrap(), "rhai");
+    assert_eq!(jval.get("body").unwrap().as_str().unwrap(), "REQUEST_BODY");
 
     // query args
     let response = client
-        .post(api_url("/processor?name=java"))
+        .get(api_url("/processor?name=java"))
         .send()
         .await
         .unwrap();
     assert_eq!(response.status().as_u16(), 200);
     let jval: serde_json::Value = response.json().await.unwrap();
-    json_basic_assert(&jval, "/processor", 3);
+    processor_json_basic_assert(&jval, "GET", "/processor", 3);
     assert_eq!(jval.get("qname").unwrap().as_str().unwrap(), "java");
 
     // query args with response code
     let response = client
-        .post(api_url("/processor?name=rhai"))
+        .get(api_url("/processor?name=rhai"))
         .send()
         .await
         .unwrap();
@@ -225,13 +277,14 @@ async fn test_rhai_ref_matcher() {
         response.text().await
     );
     let jval: serde_json::Value = response.json().await.unwrap();
-    json_basic_assert(&jval, "/processor", 4);
+    processor_json_basic_assert(&jval, "GET", "/processor", 4);
     assert_eq!(jval.get("qname").unwrap().as_str().unwrap(), "rhai");
 }
 
-fn json_basic_assert(v: &serde_json::Value, path: &str, cnt: usize) {
-    assert_eq!(v.get("output").unwrap().as_str().unwrap(), "It is .k");
+fn processor_json_basic_assert(v: &serde_json::Value, method: &str, path: &str, cnt: usize) {
     assert_eq!(v.get("path").unwrap().as_str().unwrap(), path);
+    assert_eq!(v.get("method").unwrap().as_str().unwrap(), method);
+    assert_eq!(v.get("output").unwrap().as_str().unwrap(), "It is .k");
     assert_eq!(v.get("counter").unwrap().as_u64().unwrap(), cnt as u64);
     let args: Vec<&str> = v
         .get("args")
@@ -245,4 +298,59 @@ fn json_basic_assert(v: &serde_json::Value, path: &str, cnt: usize) {
     assert_eq!(args.len(), 2);
     assert!(args.contains(&"rhai_arg_1"), "{args:?}");
     assert!(args.contains(&"rhai_arg_2"), "{args:?}");
+}
+
+#[tokio::test]
+#[serial]
+async fn test_rhai_template() {
+    // apate::test::init_env_logger("debug,apate=trace");
+    let _apate = ApateTestServer::start(build_config(), INIT_DELAY_MS);
+    let client = reqwest::Client::new();
+
+    // basic stuff
+    let response = client.post(api_url("/tpl")).send().await.unwrap();
+    let jval: serde_json::Value = response.json().await.unwrap();
+    template_json_basic_assert(&jval, "POST", "/tpl", 0);
+
+    // No return
+    let response = client.post(api_url("/tpl/java")).send().await.unwrap();
+    let text = response.text().await.unwrap();
+    assert!(text.is_empty());
+
+    // path args
+    let response = client
+        .post(api_url("/tpl/rhai"))
+        .body("REQUEST_BODY")
+        .send()
+        .await
+        .unwrap();
+    let jval: serde_json::Value = response.json().await.unwrap();
+    template_json_basic_assert(&jval, "POST", "/tpl/rhai", 2);
+    assert_eq!(jval.get("pname").unwrap().as_str().unwrap(), "rhai");
+    assert_eq!(jval.get("body").unwrap().as_str().unwrap(), "REQUEST_BODY");
+
+    // query args
+    let response = client.get(api_url("/tpl?name=java")).send().await.unwrap();
+    assert_eq!(response.status().as_u16(), 200);
+    let jval: serde_json::Value = response.json().await.unwrap();
+    template_json_basic_assert(&jval, "GET", "/tpl", 3);
+    assert_eq!(jval.get("qname").unwrap().as_str().unwrap(), "java");
+
+    // query args with response code
+    let response = client.get(api_url("/tpl?name=rhai")).send().await.unwrap();
+    assert_eq!(
+        response.status().as_u16(),
+        201,
+        "{:?}",
+        response.text().await
+    );
+    let jval: serde_json::Value = response.json().await.unwrap();
+    template_json_basic_assert(&jval, "GET", "/tpl", 4);
+    assert_eq!(jval.get("qname").unwrap().as_str().unwrap(), "rhai");
+}
+
+fn template_json_basic_assert(v: &serde_json::Value, method: &str, path: &str, cnt: usize) {
+    assert_eq!(v.get("path").unwrap().as_str().unwrap(), path);
+    assert_eq!(v.get("method").unwrap().as_str().unwrap(), method);
+    assert_eq!(v.get("counter").unwrap().as_u64().unwrap(), cnt as u64);
 }

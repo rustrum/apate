@@ -77,6 +77,7 @@ async fn deceit_handler(req: HttpRequest, body: Bytes, state: Data<ApateState>) 
             &dresp.output,
             &drctx,
             &state.minijinja,
+            &state.rhai,
         );
 
         return match output_body {
