@@ -1,0 +1,44 @@
+#
+# Simulating real app behaviour via Rhai script global state.
+#
+# The core functionality is:
+# storage_write("key", variable); - write data to global in memory store
+# storage_read("key"); - read data from global in memory store
+[[deceit]]
+uris = ["/app/user/add"]
+headers = [["Content-Type", "application/json"]]
+matchers = [{ type = "method", eq = "POST" }]
+
+[[deceit.responses]]
+type = "rhai"
+output = """
+let users = storage_read("users") ?? [];
+
+let new_record = from_json_blob(ctx.load_body());
+new_record.id = ctx.inc_counter("user_id") + 1;
+
+users.push(new_record);
+
+storage_write("users", users);
+
+return to_json_blob(new_record);
+"""
+
+[[deceit]]
+uris = ["/app/user/list"]
+headers = [["Content-Type", "application/json"]]
+matchers = [{ type = "method", eq = "GET" }]
+
+[[deceit.responses]]
+type = "rhai"
+output = """
+let users = storage_read("users") ?? [];
+
+return to_json_blob(users);
+"""
+
+
+# This searching processor is defined in another TOML file
+[[deceit.processors]]
+type = "rhai_ref"
+id = "rhai-filter"

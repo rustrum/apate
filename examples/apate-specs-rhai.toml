@@ -213,7 +213,7 @@ let query = ctx.load_query_args();
 for arg in query.keys() {
     data = data.filter(|rec| {
         if arg in rec {
-            rec[arg].to_lower() == query[arg].to_lower()
+            rec[arg].to_string().to_lower() == query[arg].to_lower()
         } else {
             false
         }

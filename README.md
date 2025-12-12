@@ -189,6 +189,11 @@ See also [minijinja filters](https://docs.rs/minijinja/latest/minijinja/filters)
 **Rhai script** - Similar to minijinja you can use Rhai script to generate content. See examples [here](./examples/apate-specs-rhai.toml).
 
 
+## TODO
+
+Think about introducing global K/V storage for rhai scripts where values will be a any Rhai value de/serialized from JSON.
+
+
 ## License
 
 This product distributed under MIT license BUT only under certain conditions that listed in the LICENSE-TERMS file.

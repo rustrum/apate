@@ -1,5 +1,5 @@
 use std::{
-    collections::HashMap,
+    collections::{BTreeMap, HashMap},
     sync::{Arc, RwLock, atomic::Ordering},
 };
 
@@ -9,6 +9,8 @@ use rhai::{
 use serde::{Deserialize, Serialize};
 
 use crate::{RequestContext, deceit::DeceitResponseContext};
+
+type RhaiStorage = Arc<RwLock<BTreeMap<String, String>>>;
 
 /// Thai script specification that can be used as a matcher or processor.
 #[derive(Clone, Debug, Default, Deserialize, Serialize)]
@@ -22,11 +24,15 @@ pub struct RhaiState {
     engine: Arc<Engine>,
     scripts: Arc<RwLock<HashMap<String, String>>>,
     asts: Arc<RwLock<HashMap<String, Arc<AST>>>>,
+    #[allow(dead_code)]
+    storage: RhaiStorage,
 }
 impl Default for RhaiState {
     fn default() -> Self {
+        let storage = RhaiStorage::default();
         Self {
-            engine: Arc::new(build_rhai_engine()),
+            engine: Arc::new(build_rhai_engine(storage.clone())),
+            storage,
             scripts: Default::default(),
             asts: Default::default(),
         }
@@ -197,13 +203,17 @@ impl RhaiResponseContext {
             .store(value as u16, Ordering::Relaxed);
     }
 
-    pub fn inc_counter(&mut self, key: &str) -> Result<u64, Box<EvalAltResult>> {
-        self.ctx.counters.get_and_increment(key).map_err(|e| {
-            Box::new(EvalAltResult::ErrorSystem(
-                "Failed inc_counter".to_string(),
-                e.into(),
-            ))
-        })
+    pub fn inc_counter(&mut self, key: &str) -> Result<i64, Box<EvalAltResult>> {
+        self.ctx
+            .counters
+            .get_and_increment(key)
+            .map_err(|e| {
+                Box::new(EvalAltResult::ErrorSystem(
+                    "Failed inc_counter".to_string(),
+                    e.into(),
+                ))
+            })
+            .map(|v| v as i64)
     }
 
     pub fn load_headers(&mut self) -> RhaiMap {
@@ -238,11 +248,19 @@ impl RhaiResponseContext {
     }
 }
 
-fn build_rhai_engine() -> Engine {
+fn build_rhai_engine(rs: RhaiStorage) -> Engine {
     let mut engine = Engine::new();
 
     engine.register_fn("to_json_blob", to_json_blob);
     engine.register_fn("from_json_blob", from_json_blob);
+
+    let db_read = rs.clone();
+    engine.register_fn("storage_read", move |key: &str| storage_read(&db_read, key));
+
+    let db_write = rs.clone();
+    engine.register_fn("storage_write", move |key: &str, value: Dynamic| {
+        storage_write(&db_write, key, &value)
+    });
 
     engine.on_print(|s| {
         log::info!("RHAI: {s}");
@@ -277,6 +295,50 @@ fn build_rhai_engine() -> Engine {
         .register_fn("load_body", RhaiResponseContext::load_body);
 
     engine
+}
+
+fn storage_read(storage: &RhaiStorage, key: &str) -> Result<Dynamic, Box<EvalAltResult>> {
+    let rguard = storage.read().map_err(|e| {
+        Box::new(EvalAltResult::ErrorSystem(
+            "Can't acquire RwLock to read KV".to_string(),
+            Box::new(std::io::Error::other(e.to_string())),
+        ))
+    })?;
+
+    let Some(value) = rguard.get(key) else {
+        return Ok(Dynamic::default());
+    };
+
+    serde_json::from_str::<Dynamic>(value).map_err(|e| {
+        Box::new(EvalAltResult::ErrorSystem(
+            "Can't decode JSON from bytes".to_string(),
+            Box::new(e),
+        ))
+    })
+}
+
+fn storage_write(
+    storage: &RhaiStorage,
+    key: &str,
+    value: &Dynamic,
+) -> Result<(), Box<EvalAltResult>> {
+    let to_store = serde_json::to_string(value).map_err(|e| {
+        Box::new(EvalAltResult::ErrorSystem(
+            "Can't convert to JSON string".to_string(),
+            Box::new(e),
+        ))
+    })?;
+
+    let mut wguard = storage.write().map_err(|e| {
+        Box::new(EvalAltResult::ErrorSystem(
+            "Can't acquire RwLock to write KV".to_string(),
+            Box::new(std::io::Error::other(e.to_string())),
+        ))
+    })?;
+
+    wguard.insert(key.to_string(), to_store);
+
+    Ok(())
 }
 
 fn to_json_blob(value: &mut Dynamic) -> Result<Blob, Box<EvalAltResult>> {
