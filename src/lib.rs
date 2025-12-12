@@ -13,8 +13,8 @@ use std::collections::HashMap;
 use std::fmt::Display;
 use std::io::Read as _;
 use std::net::Ipv4Addr;
-use std::sync::Arc;
 use std::sync::atomic::AtomicU64;
+use std::sync::{Arc, Mutex};
 
 use actix_web::App;
 use actix_web::dev::Server;
@@ -194,15 +194,15 @@ impl ApateCounters {
 
 #[derive(Debug, Clone)]
 pub struct RequestContext {
-    /// Maybe I even do not need to store it during request anymore
-    // req: Rc<HttpRequest>,
-    pub body: Arc<Bytes>,
     pub method: String,
-    pub request_path: Arc<String>,
     pub headers: Arc<HashMap<String, String>>,
     pub path: Arc<String>,
+    pub request_path: Arc<String>,
     pub query_args: Arc<HashMap<String, String>>,
     pub path_args: Arc<HashMap<String, String>>,
+    pub body: Arc<Bytes>,
+    #[allow(clippy::type_complexity)]
+    pub body_json: Arc<Mutex<Option<Result<Arc<serde_json::Value>, String>>>>,
 }
 
 impl RequestContext {
@@ -228,9 +228,8 @@ impl RequestContext {
             log::error!("Can't decode query string from URL");
         }
         let request_path = Arc::new(req.path().to_string());
-        // let req = Rc::new(req);
+
         Self {
-            // req,
             body: Arc::new(body),
             method,
             request_path,
@@ -238,12 +237,36 @@ impl RequestContext {
             query_args: Arc::new(args_query),
             path: Arc::new("/".to_string()),
             path_args: Arc::new(Default::default()),
+            body_json: Default::default(),
         }
     }
 
     pub fn update_paths(&mut self, path: String, args_path: HashMap<String, String>) {
         self.path = Arc::new(path);
         self.path_args = Arc::new(args_path);
+    }
+
+    pub fn load_body_as_json(&self) -> Result<Arc<serde_json::Value>, String> {
+        let mut guard = self
+            .body_json
+            .lock()
+            .expect("WTF stuff. No multithread access here expected.");
+
+        if let Some(value) = (*guard).as_ref() {
+            return value.clone();
+        }
+
+        let body = String::from_utf8_lossy(&self.body);
+        if body.trim().is_empty() {
+            return Ok(Arc::new(serde_json::Value::Null));
+        }
+        let json_value = serde_json::from_slice::<serde_json::Value>(body.as_bytes())
+            .map(Arc::new)
+            .map_err(|e| format!("{e}"));
+
+        *guard = Some(json_value.clone());
+
+        json_value
     }
 }
 

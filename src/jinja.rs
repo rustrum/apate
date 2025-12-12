@@ -48,8 +48,8 @@ impl Object for MiniJinjaResponseContext {
 
     fn get_value(self: &Arc<Self>, field: &Value) -> Option<Value> {
         match field.as_str()? {
-            "method" => Some(Value::from(self.ctx.method.as_str())),
-            "path" => Some(Value::from(self.ctx.path.as_str())),
+            "method" => Some(Value::from(self.ctx.req.method.as_str())),
+            "path" => Some(Value::from(self.ctx.req.path.as_str())),
             _ => None,
         }
     }
@@ -61,18 +61,18 @@ impl Object for MiniJinjaResponseContext {
         args: &[Value],
     ) -> Result<Value, minijinja::Error> {
         match method {
-            "load_headers" => Ok(Value::from(self.ctx.headers.as_ref().clone())),
-            "load_query_args" => Ok(Value::from(self.ctx.query_args.as_ref().clone())),
-            "load_path_args" => Ok(Value::from(self.ctx.path_args.as_ref().clone())),
+            "load_headers" => Ok(Value::from(self.ctx.req.headers.as_ref().clone())),
+            "load_query_args" => Ok(Value::from(self.ctx.req.query_args.as_ref().clone())),
+            "load_path_args" => Ok(Value::from(self.ctx.req.path_args.as_ref().clone())),
             "load_body_string" => {
-                if self.ctx.request_body.trim_ascii().is_empty() {
+                if self.ctx.req.body.trim_ascii().is_empty() {
                     Ok(Value::default())
                 } else {
-                    let body = String::from_utf8_lossy(self.ctx.request_body.as_ref());
+                    let body = String::from_utf8_lossy(self.ctx.req.body.as_ref());
                     Ok(Value::from(body))
                 }
             }
-            "load_body_json" => match self.ctx.load_request_json() {
+            "load_body_json" => match self.ctx.req.load_body_as_json() {
                 Ok(v) => Ok(Value::from_serialize(v.as_ref())),
                 Err(e) => {
                     log::error!("Can't parse response body as JSON: {e}");

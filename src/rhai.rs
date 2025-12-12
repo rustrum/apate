@@ -189,7 +189,7 @@ impl From<DeceitResponseContext> for RhaiResponseContext {
 
 impl RhaiResponseContext {
     pub fn get_path(&mut self) -> String {
-        self.ctx.path.to_string()
+        self.ctx.req.path.to_string()
     }
 
     pub fn get_response_code(&mut self) -> i64 {
@@ -213,6 +213,7 @@ impl RhaiResponseContext {
 
     pub fn load_headers(&mut self) -> RhaiMap {
         self.ctx
+            .req
             .headers
             .iter()
             .map(|(k, v)| (k.into(), v.into()))
@@ -221,6 +222,7 @@ impl RhaiResponseContext {
 
     pub fn load_path_args(&mut self) -> RhaiMap {
         self.ctx
+            .req
             .path_args
             .iter()
             .map(|(k, v)| (k.into(), v.into()))
@@ -229,6 +231,7 @@ impl RhaiResponseContext {
 
     pub fn load_query_args(&mut self) -> RhaiMap {
         self.ctx
+            .req
             .query_args
             .iter()
             .map(|(k, v)| (k.into(), v.into()))

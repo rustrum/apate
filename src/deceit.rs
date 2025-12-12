@@ -1,13 +1,10 @@
 //! Deceit is the unit responsible for processing serveral status URIs or path patters.
 //! All deceit related logic is placed into this module.
 
-use std::{
-    collections::HashMap,
-    sync::{Arc, Mutex, atomic::AtomicU16},
-};
+use std::sync::{Arc, atomic::AtomicU16};
 
 use actix_router::{Path, ResourceDef};
-use actix_web::{http::StatusCode, web::Bytes};
+use actix_web::http::StatusCode;
 
 use serde::{Deserialize, Serialize};
 
@@ -93,49 +90,9 @@ impl Deceit {
 /// Context for output renderers and pre/post processors as well.
 #[derive(Clone)]
 pub struct DeceitResponseContext {
-    pub method: String,
-
-    pub path: Arc<String>,
-
-    pub headers: Arc<HashMap<String, String>>,
-
-    pub query_args: Arc<HashMap<String, String>>,
-
-    pub path_args: Arc<HashMap<String, String>>,
-
+    pub req: RequestContext,
     pub response_code: Arc<AtomicU16>,
-
     pub counters: ApateCounters,
-
-    pub request_body: Arc<Bytes>,
-
-    #[allow(clippy::type_complexity)]
-    pub request_json: Arc<Mutex<Option<Result<Arc<serde_json::Value>, String>>>>,
-}
-
-impl DeceitResponseContext {
-    pub fn load_request_json(&self) -> Result<Arc<serde_json::Value>, String> {
-        let mut guard = self
-            .request_json
-            .lock()
-            .expect("WTF stuff. No multithread access here expected.");
-
-        if let Some(value) = (*guard).as_ref() {
-            return value.clone();
-        }
-
-        let body = String::from_utf8_lossy(&self.request_body);
-        if body.trim().is_empty() {
-            return Ok(Arc::new(serde_json::Value::Null));
-        }
-        let json_value = serde_json::from_slice::<serde_json::Value>(body.as_bytes())
-            .map(Arc::new)
-            .map_err(|e| format!("{e}"));
-
-        *guard = Some(json_value.clone());
-
-        json_value
-    }
 }
 
 #[derive(Clone, Debug, Default, Deserialize, Serialize)]
@@ -166,15 +123,9 @@ pub fn create_response_context(
     cnt: ApateCounters,
 ) -> color_eyre::Result<DeceitResponseContext> {
     Ok(DeceitResponseContext {
-        method: ctx.method.clone(),
-        path: ctx.request_path.clone(),
-        headers: ctx.headers.clone(),
-        query_args: ctx.query_args.clone(),
-        path_args: ctx.path_args.clone(),
-        request_json: Default::default(),
+        req: ctx.clone(),
         response_code: Arc::new(AtomicU16::new(0)),
         counters: cnt,
-        request_body: ctx.body.clone(),
     })
 }
 
