@@ -11,10 +11,10 @@
 API mocking server that main purpose is to help with integration and end-to-end testing.
 Project named after Apate - the goddess and personification of deceit.
 
-
-## It is stable and ready to use 🚀
-
-Just some small changes expected. Then I will move it to v0.1.0 release and will wait for user feedback.
+🚀 Project is stable.
+Almost everything works as it was planned.
+I will wait some time for user feedback.
+No breaking changes expected in the nearest future.
 
 
 ## Features
@@ -224,6 +224,9 @@ Has global variable `ctx` with next API:
 
 Has set of global functions:
 
+- random_num() || random_num(max) || random_num(from, to) - to return random number
+- random_hex() || random_hex(bytes_len) - return random hex string for some bytes length or default
+- uuid_v4() - returns random UUID v4
 - to_json_blob(value) - serialize any value to JSON blob
 - from_json_blob(blob_input) - deserialize value (array, object) from JSON blob
 - storage_read(key) - reads any value from storage by key

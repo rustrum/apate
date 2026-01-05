@@ -57,7 +57,16 @@ type = { rhai_ref = { id = "rhai-output-template", args = ["custom_arg1", "custo
 [[rhai]]
 id = "rhai-output-template"
 script= """
-// Just a simple output that returns arguments from TOML config
-let data = #{ message: "Success", args: args };
+// Just a simple output that tests global functions and returns TOML args
+let data = #{ 
+    message: "Success", 
+    args: args,
+    uuid: uuid_v4(),
+    hex: random_hex(),
+    hex_8: random_hex(8),
+    random: random_num(),
+    random_max: random_num(42),
+    random_range: random_num(100, 200)    
+};
 return to_json_blob(data);
 """

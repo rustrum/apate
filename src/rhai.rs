@@ -3,10 +3,12 @@ use std::{
     sync::{Arc, RwLock, atomic::Ordering},
 };
 
+use rand::{Rng as _, RngCore as _};
 use rhai::{
     AST, Blob, Dynamic, Engine, EvalAltResult, Map as RhaiMap, ParseError, ParseErrorType, Position,
 };
 use serde::{Deserialize, Serialize};
+use uuid::Uuid;
 
 use crate::{RequestContext, deceit::DeceitResponseContext};
 
@@ -253,6 +255,16 @@ fn build_rhai_engine(rs: RhaiStorage) -> Engine {
 
     engine.register_fn("to_json_blob", to_json_blob);
     engine.register_fn("from_json_blob", from_json_blob);
+    engine.register_fn("uuid_v4", ctx_uuid_v4);
+
+    engine
+        .register_fn("random_num", ctx_random_num)
+        .register_fn("random_num", ctx_random_num_max)
+        .register_fn("random_num", ctx_random_num_range);
+
+    engine
+        .register_fn("random_hex", ctx_random_hex)
+        .register_fn("random_hex", ctx_random_hex_default);
 
     let db_read = rs.clone();
     engine.register_fn("storage_read", move |key: &str| storage_read(&db_read, key));
@@ -359,4 +371,32 @@ fn from_json_blob(value: &mut Blob) -> Result<Dynamic, Box<EvalAltResult>> {
             Box::new(e),
         ))
     })
+}
+
+fn ctx_random_num() -> i64 {
+    rand::random::<i64>()
+}
+
+fn ctx_random_num_max(max: i64) -> i64 {
+    rand::random::<i64>() % max
+}
+
+fn ctx_random_num_range(from: i64, to: i64) -> i64 {
+    rand::rng().random_range(from..to)
+}
+
+fn ctx_random_hex_default() -> String {
+    ctx_random_hex(0)
+}
+
+fn ctx_random_hex(length: i64) -> String {
+    let bytes_num = if length == 0 { 32 } else { length as usize };
+    let mut bytes = vec![0u8; bytes_num];
+    rand::rng().fill_bytes(&mut bytes);
+
+    hex::encode(bytes)
+}
+
+fn ctx_uuid_v4() -> String {
+    Uuid::new_v4().to_string()
 }
