@@ -311,7 +311,7 @@ dependencies = [
 
 [[package]]
 name = "apate"
-version = "0.0.12"
+version = "0.1.0"
 dependencies = [
  "actix-router",
  "actix-web",

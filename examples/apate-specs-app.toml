@@ -37,8 +37,27 @@ let users = storage_read("users") ?? [];
 return to_json_blob(users);
 """
 
-
 # This searching processor is defined in another TOML file
 [[deceit.processors]]
 type = "rhai_ref"
 id = "rhai-filter"
+
+[[deceit]]
+uris = ["/app/output/ref"]
+headers = [["Content-Type", "application/json"]]
+matchers = [{ type = "method", eq = "GET" }]
+
+[[deceit.responses]]
+# A little bit clunky config that does not match similar for matchers and processors
+# This config reuse global rhai-script
+type = { rhai_ref = { id = "rhai-output-template", args = ["custom_arg1", "custom_arg2"] } }
+
+
+# This is our global rhai script
+[[rhai]]
+id = "rhai-output-template"
+script= """
+// Just a simple output that returns arguments from TOML config
+let data = #{ message: "Success", args: args };
+return to_json_blob(data);
+"""

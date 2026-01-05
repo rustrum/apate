@@ -73,7 +73,7 @@ async fn deceit_handler(req: HttpRequest, body: Bytes, state: Data<ApateState>) 
 
         let output_body = crate::output::output_response_body(
             &deceit_ref,
-            dresp.output_type,
+            &dresp.output_type,
             &dresp.output,
             &drctx,
             &state.minijinja,

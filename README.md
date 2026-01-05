@@ -23,6 +23,7 @@ Just some small changes expected. Then I will move it to v0.1.0 release and will
  - 🎭 Mocking any string & binary responses
  - ⛩️ Jinja templates to customize response body
  - 🌿 [Rhai](https://rhai.rs) scripting for advanced scenarios
+ - 💾 In memory persistence to mimic DB behavior in some cases   
  - 🛠️ Unit tests friendly rust library
  - 🦀 Ability to build custom mocking server with your rust extensions
 
@@ -189,9 +190,68 @@ See also [minijinja filters](https://docs.rs/minijinja/latest/minijinja/filters)
 **Rhai script** - Similar to minijinja you can use Rhai script to generate content. See examples [here](./examples/apate-specs-rhai.toml).
 
 
-## TODO
+## Scripting specification hints
 
-Think about introducing global K/V storage for rhai scripts where values will be a any Rhai value de/serialized from JSON.
+There are some additional functions & context that is available for Jinja templates and Rhai scripts.
+
+
+### Request context
+
+Available for matchers and output rendering.
+
+#### Jinja request context
+
+Has set of global functions:
+
+- random_num() || random_num(max) || random_num(from, to) - to return random number
+- random_hex() || random_hex(bytes_len) - return random hex string for some bytes length or default
+- uuid_v4() - returns random UUID v4
+
+Has global variable `ctx` with next API:
+
+- ctx.method - returns request method
+- ctx.path - returns request path
+- ctx.response_code - get set custom response code if any (default 0 if not set)
+- ctx.load_headers() -> build request headers map (lowercase keys)
+- ctx.load_query_args() -> build map with URL query arguments
+- ctx.load_path_args() -> build arguments map from specs URIs like `/mypath/{user_id}/{item_id}`
+- ctx.load_body_string() -> load request body as string
+- ctx.load_body_json() -> load request body as json
+- ctx.inc_counter("key") -> increment counter by key and returns previous value
+
+
+#### Rhai request context
+
+Has set of global functions:
+
+- to_json_blob(value) - serialize any value to JSON blob
+- from_json_blob(blob_input) - deserialize value (array, object) from JSON blob
+- storage_read(key) - reads any value from storage by key
+- storage_write(key, value) - writes any value to storage by key
+
+Has global variable `args` that contains custom user arguments from TOML specs if any.
+
+Has global variable `ctx` with next API:
+ 
+- ctx.method -> returns request method
+- ctx.path -> returns request path
+- ctx.load_headers() -> build request headers map (lowercase keys)
+- ctx.load_query_args() -> build map with URL query arguments
+- ctx.load_path_args() -> build arguments map from specs URIs like `/mypath/{user_id}/{item_id}`
+- ctx.load_body() -> reads request body as Blob
+
+### Response context
+
+Available for Rhai post processors. 
+
+Contains same global functions as a request context and `args` variable.
+
+Has global variable `body` that contains response output.
+
+Has global variable `ctx` with some additional functionality:
+ 
+- ctx.inc_counter(key) - increment counter by key and returns previous value
+- ctx.response_code - get set custom response code if any (default 0 if not set)
 
 
 ## License

@@ -3,7 +3,7 @@ use std::sync::atomic::Ordering;
 
 use base64::Engine as _;
 use color_eyre::eyre::{bail, eyre};
-use rhai::{AST, Blob, Dynamic, Engine, Scope};
+use rhai::{AST, Array, Blob, Dynamic, Engine, Scope};
 use serde::{Deserialize, Serialize};
 
 use crate::{
@@ -15,7 +15,7 @@ use crate::{
 
 /// Define an approach how to handle `output` property from configuration.
 /// Result will be placed in HTTP response message body.
-#[derive(Default, Copy, Clone, Debug, Deserialize, Serialize)]
+#[derive(Default, Clone, Debug, Deserialize, Serialize)]
 #[serde(rename_all = "snake_case")]
 pub enum OutputType {
     /// Return output string as is.
@@ -30,11 +30,18 @@ pub enum OutputType {
     Base64,
     /// Output is a Rhai script
     Rhai,
+
+    // The output script will be reused from a global registry.
+    RhaiRef {
+        id: String,
+        #[serde(default)]
+        args: Vec<String>,
+    },
 }
 
 pub fn output_response_body(
     deceit_ref: &ResourceRef,
-    tp: OutputType,
+    tp: &OutputType,
     output: &str,
     ctx: &DeceitResponseContext,
     mini_jinja_state: &MiniJinjaState,
@@ -49,6 +56,9 @@ pub fn output_response_body(
         }
         OutputType::Base64 => Ok(base64::prelude::BASE64_STANDARD.decode(output.trim())?),
         OutputType::Rhai => render_using_rhai(deceit_ref, output, ctx, rhai_state),
+        OutputType::RhaiRef { id, args } => {
+            render_using_rhai_ref(deceit_ref, id, args.clone(), ctx, rhai_state)
+        }
     }
 }
 
@@ -81,6 +91,25 @@ fn render_using_minijinja(
     Ok(response.into_bytes())
 }
 
+fn render_using_rhai_ref(
+    rref: &ResourceRef,
+    script_id: &str,
+    args: Vec<String>,
+    ctx: &DeceitResponseContext,
+    rhai: &RhaiState,
+) -> color_eyre::Result<Vec<u8>> {
+    let (engine, ast) = match rhai.get_exec_global(script_id) {
+        Ok(lfn) => lfn,
+        Err(e) => {
+            log::error!("Can't load Rhai top level scrip by id:{script_id} path:{rref} {e:?}");
+            return Err(e.into());
+        }
+    };
+
+    let args = args.into_iter().map(Into::into).collect();
+    call_rhai(&engine, &ast, ctx.clone().into(), args)
+}
+
 fn render_using_rhai(
     deceit_ref: &ResourceRef,
     script: &str,
@@ -93,12 +122,18 @@ fn render_using_rhai(
         .get_exec(id.clone(), script)
         .map_err(|e| eyre!("Can't load Rhai template: {e:?}"))?;
 
-    call_rhai(&engine, &ast, ctx.clone().into())
+    call_rhai(&engine, &ast, ctx.clone().into(), Array::new())
 }
 
-fn call_rhai(engine: &Engine, ast: &AST, ctx: RhaiResponseContext) -> color_eyre::Result<Vec<u8>> {
+fn call_rhai(
+    engine: &Engine,
+    ast: &AST,
+    ctx: RhaiResponseContext,
+    args: Array,
+) -> color_eyre::Result<Vec<u8>> {
     let mut scope = Scope::new();
     scope.set_value("ctx", ctx);
+    scope.set_value("args", args);
 
     let result = engine.eval_ast_with_scope::<Dynamic>(&mut scope, ast)?;
 
