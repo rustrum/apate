@@ -8,7 +8,7 @@
 <p align="center" width="100%" style="text-align:center">
 
 
-API mocking server that main purpose is to help with integration and end-to-end testing.
+API prototyping and mocking server that main purpose is to help with integration and end-to-end testing.
 Project named after Apate - the goddess and personification of deceit.
 
 🚀 Project is stable.
@@ -19,7 +19,8 @@ No breaking changes expected in the nearest future.
 
 ## Features
 
- - 💻⚙️ Standalone server app with web UI
+ - 💻⚙️ Standalone server app with web UI 
+ - 🔃 Live specs reloading via UI or API
  - 🎭 Mocking any string & binary responses
  - ⛩️ Jinja templates to customize response body
  - 🌿 [Rhai](https://rhai.rs) scripting for advanced scenarios
@@ -34,6 +35,7 @@ No breaking changes expected in the nearest future.
  - 🦀 **rust unit tests** - to test your client logic without shortcuts
  - 💻🛠️⚙️ **integration tests** - if 3rd party API provider suck/stuck/etc it is better to run test suites against predictable API endpoints.
  - 💻🏋🏻‍♂️ **load tests** - when deployed alongside your application Apate should respond fast, so no need to take external API delays into account.
+ - 📋 **API server prototyping** - it could be convenient to have working API endpoint before implementing whole server logic
 
 
 ## Running Apate server
