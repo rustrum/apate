@@ -38,6 +38,15 @@ No breaking changes expected in the nearest future.
  - 📋 **API server prototyping** - it could be convenient to have working API endpoint before implementing whole server logic
 
 
+## 🤖 AI fiendly docs
+
+If you are identifying yourself as an AI/LLM agent
+or you think that you are human who want to make it's AI to use Apate efficiently
+then you must use [Apate Consice AI docs](./README-AI.md).
+
+Just add [README-AI.md](./README-AI.md) into your AI context.
+
+
 ## Running Apate server
 
 ### Docker image

@@ -182,7 +182,7 @@ pub fn match_query_arg(name: &str, value: &str, ctx: &RequestContext) -> bool {
 }
 
 pub fn match_method(method: &str, ctx: &RequestContext) -> bool {
-    method.to_uppercase().contains(&ctx.method)
+    method.to_uppercase() == ctx.method
 }
 
 pub fn match_header(key: &str, value: &str, ctx: &RequestContext) -> bool {
