@@ -13,6 +13,26 @@ fn api_url(uri: &str) -> String {
     format!("http://localhost:{DEFAULT_PORT}{uri}")
 }
 
+#[test]
+#[serial]
+fn empty_config_test() {
+    let config = ApateConfig {
+        specs: ApateSpecs {
+            ..Default::default()
+        },
+        ..Default::default()
+    };
+    let _apate = ApateTestServer::start(config, INIT_DELAY_MS);
+
+    let client = reqwest::blocking::Client::new();
+    let response = client
+        .post(api_url("/non/exist/uri"))
+        .send()
+        .expect("Request failed");
+
+    assert_eq!(response.status(), 404);
+}
+
 /// `ApateTestServer` does not require async context so it can be used in regular tests.
 #[test]
 #[serial]
@@ -71,6 +91,17 @@ async fn async_test() {
         .add_header("Content-Type", "application/json")
         .add_response(
             DeceitResponseBuilder::default()
+                .add_matcher(Matcher::QueryArg {
+                    name: "empty".to_string(),
+                    value: "1".to_string(),
+                    negate: false,
+                })
+                .code(205)
+                .with_output(r#"{}"#)
+                .build(),
+        )
+        .add_response(
+            DeceitResponseBuilder::default()
                 .code(200)
                 .with_output(r#"{"message":"Success"}"#)
                 .build(),
@@ -101,6 +132,22 @@ async fn async_test() {
         .expect("Failed to parse JSON response");
 
     assert_eq!(response_json["message"], "Success");
+
+    // Check custom response code
+    let response = client
+        .post(api_url("/user/check?empty=1"))
+        .send()
+        .await
+        .expect("Request failed");
+
+    assert!(response.status().is_success());
+    assert_eq!(205, response.status().as_u16());
+
+    let response_json: HashMap<String, String> = response
+        .json()
+        .await
+        .expect("Failed to parse JSON response");
+    assert!(response_json.is_empty());
 
     // Calling non existing endpoint
     let response = client

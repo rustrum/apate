@@ -138,6 +138,7 @@ async fn specification_append(
     HttpResponse::Ok().body("New specification appended to the existing one".to_string())
 }
 
+#[allow(clippy::result_large_err)]
 fn parse_input_toml(body: &Bytes) -> Result<ApateSpecs, HttpResponse> {
     let body_str = String::from_utf8_lossy(body);
 

@@ -1,10 +1,11 @@
 [advisories]
 ignore = [
     # Should be fixed in next big rhai releases
-    "RUSTSEC-2024-0384",
+    "RUSTSEC-2026-0249",
     # Could be fixed with next actix-web/tokio-rustls updates
     "RUSTSEC-2025-0010",
-    # Not a big deal for now
-    "RUSTSEC-2025-0009",
+    "RUSTSEC-2026-0258",
+    #
     "RUSTSEC-2024-0336",
+    "RUSTSEC-2025-0009",
 ]

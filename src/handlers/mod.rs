@@ -71,6 +71,13 @@ async fn deceit_handler(req: HttpRequest, body: Bytes, state: Data<ApateState>) 
             }
         };
 
+        // Apply the response code from DeceitResponse if set
+        if let Some(code) = dresp.code {
+            drctx
+                .response_code
+                .store(code, std::sync::atomic::Ordering::Relaxed);
+        }
+
         let output_body = crate::output::output_response_body(
             &deceit_ref,
             &dresp.output_type,
