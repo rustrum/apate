@@ -1,7 +1,7 @@
 # Apate — AI Agent Reference
 
 Project version: 0.1.2
-Git: b6f5384e6ba1082cb04ef1d08a2e8e7b4c249750
+Git: 111f206588e7cae5d42eb5a67d442742aaaaf001
 
 > This document is written **for AI agents** (and any tool that consumes it). It is a precise,
 > unambiguous reference of the Apate project: its DSL (TOML specification), its scripting
