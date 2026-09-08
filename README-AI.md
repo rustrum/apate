@@ -1,7 +1,7 @@
 # Apate — AI Agent Reference
 
-Project version: 0.1.1 
-Git: 46812102c98d18ba3f422c888c4d1b71947f6d67
+Project version: 0.1.2
+Git: b6f5384e6ba1082cb04ef1d08a2e8e7b4c249750
 
 > This document is written **for AI agents** (and any tool that consumes it). It is a precise,
 > unambiguous reference of the Apate project: its DSL (TOML specification), its scripting
@@ -99,7 +99,7 @@ Field notes:
 - `uris` — each entry is a literal path or a pattern with path arguments
   (`/user/{user_id}`). The first URI that captures-matches the request path wins.
 - `headers` — an array of `[key, value]` string pairs. Applied to the response.
-- `matchers` — deception-level matchers. If any fails, this whole `Deceit` is skipped.
+- `matchers` — deceit-level matchers. If any fails, this whole `Deceit` is skipped.
 - `processors` — run after the selected response body is rendered (before response-level
   processors). See §2.4.
 - `responses` — ordered list. The first one whose matchers pass is chosen. A response with
@@ -167,7 +167,7 @@ return true;
 | `hex`      | HEX string → decoded bytes (no `0x` prefix expected) | Optional `0x` prefix is stripped                          |
 | `base64`   | Base64 string → decoded bytes                         | Standard alphabet                                          |
 | `rhai`     | inline Rhai script → returns a Blob (response body)  | See §4 Rhai script API                                     |
-| `rhai_ref` | reusable Rhai script by id → returns a Blob          | `type = { rhai_ref = { id = "...", args = [...] } }`      |
+| `rhai_ref` | reusable Rhai script by id → returns a Blob          | `id = "..."`, optional `args = [...]`                     |
 
 Binary examples (`hex`, `base64`) are the way to return non-text payloads (e.g. PNG files).
 
@@ -221,7 +221,7 @@ with Jinja2-compatible syntax. Full syntax reference:
 | `random_hex()`                        | random HEX string (32 bytes → 64 chars)    |
 | `random_hex(bytes_len)`               | random HEX string of `bytes_len` bytes     |
 | `uuid_v4()`                           | a random UUID v4 (string)                  |
-| `force_response_code(http_code)`      | **sets/overwrites** the response status code for this request |
+| `set_response_code(code)`           | **sets/overwrites** the response status code for this request |
 
 > All `random_*`/`uuid_v4` return **strings** (not numbers) in Jinja.
 
@@ -242,9 +242,6 @@ Exposed under the variable name `ctx`.
 - `ctx.inc_counter("key")` → returns the **previous** counter value for `key`, then
   increments it by 1 (first call returns `0`). Counters are shared server-wide per key.
 - `ctx.set_response_code(code)` → **sets** the response status code (e.g. `ctx.set_response_code(503)`)
-
-> **Note:** In Jinja you **set** the response code via `ctx.set_response_code(code)` or
-> `force_response_code(code)`. There is no readable `ctx.response_code` property in Jinja.
 
 ### 3.3 Jinja examples
 
@@ -750,18 +747,32 @@ fn embedded_processor_test() {
 
 ---
 
-## 7. Running as a Docker image
+## 7. Running the Apate server
+
+### 7.1 Install & run locally (CLI)
+
+Install the `apate` binary from crates.io, then run it directly:
+
+```sh
+cargo install apate            # puts the `apate` binary on your $PATH
+apate                          # start on default port 8228, no specs
+apate -p 8228 ./spec.toml      # start on port 8228 with a TOML spec file
+```
+
+CLI arguments (higher priority than env vars) and env configuration: see §7.3.
+
+### 7.2 Run from Docker image
 
 Official image: `ghcr.io/rustrum/apate`. The container runs the `apate` binary, listens on
 port **8228**, and starts with **no specs** (add them via UI or API).
 
-### 7.1 Run an empty server
+#### 7.2.1 Run an empty server
 
 ```sh
 docker run --rm -t -p 8228:8228 ghcr.io/rustrum/apate:latest
 ```
 
-### 7.2 Run with mounted TOML specs
+#### 7.2.2 Run with mounted TOML specs
 
 Mount your specs and expose their path(s) through `APATHE_SPECS_FILE_*` env variables:
 
@@ -811,7 +822,7 @@ Example live spec update:
 ```sh
 curl -X POST http://localhost:8228/apate/specs/replace -d @./new-specs.toml
 curl http://localhost:8228/apate/specs        # dump current specs as TOML
-curl http://localhost:8228/apate/info         # {"name":"Apate API mocking server","version":"0.1.1"}
+curl http://localhost:8228/apate/info         # {"name":"Apate API mocking server","version":"0.1.2"}
 ```
 
 All `POST` spec endpoints accept a TOML document (the same shape as §2) in the request body

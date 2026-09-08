@@ -48,8 +48,9 @@ headers = [["Content-Type", "application/json"]]
 matchers = [{ type = "method", eq = "GET" }]
 
 [[deceit.responses]]
-# A little bit clunky config that does not match similar for matchers and processors
-# This config reuse global rhai-script
+# A little bit clunky config, not the same as for matchers and processors.
+# Such format is used only for responses.
+# It is reuseing global rhai-script
 type = { rhai_ref = { id = "rhai-output-template", args = ["custom_arg1", "custom_arg2"] } }
 
 

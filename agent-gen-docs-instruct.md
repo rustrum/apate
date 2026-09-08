@@ -15,13 +15,14 @@ I must read `README.md` and `README-AI.md` to understand current documentation s
 
 I must read project files only if they are not provided in initial prompt!
 
-I will read project files to understand how everything works.
+I must try to use code2prompt command to read all project one once
+`code2prompt . --include="*.rs,*.toml,*.md,Dockerfile" --exclude="agent-gen-docs-instruct.md"`
 
-Read all files from:
+If previous command failed I must read all files from:
 
-- files in `src` dir `ls -R ./src` - core code functionality
-- files in `tests` dir `ls -R ./tests` - could spot some light on how to use rust API
-- files in `examples` dir `ls -R ./examples` - are mostly varios examples of DSL usage
+- `src` dir `ls -R ./src` - core code functionality
+- `tests` dir `ls -R ./tests` - could spot some light on how to use rust API
+- `examples` dir `ls -R ./examples` - are mostly varios examples of DSL usage
 
 ## Validate existing docuementation
 
@@ -58,7 +59,7 @@ Docs header must contains project version from `Cargo.toml` and latest git commi
     - Rhai script API
     - Jinja templates API
 - Basic DSL usage examples
-- Hints now to run apate server locally from cli
+- Hints now to run apate server locally from cli (including how to install from cargo)
 - Hints how to run from Docker image
 - Using as a rust test library
 - Extending server with custom processors - this section should be as short as possible

@@ -77,9 +77,9 @@ fn render_using_minijinja(
     mini_jinja_state.add_minijinja_template(&id, template)?;
     let mut env = mini_jinja_state.get_minijinja();
 
-    let force_response_code = ctx.response_code.clone();
-    env.add_function("force_response_code", move |code: u16| {
-        force_response_code.store(code, Ordering::Relaxed);
+    let set_response_code = ctx.response_code.clone();
+    env.add_function("set_response_code", move |code: u16| {
+        set_response_code.store(code, Ordering::Relaxed);
     });
 
     let tpl = env.get_template(&id)?;

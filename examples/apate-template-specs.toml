@@ -10,7 +10,7 @@ type = "jinja"
 output = """
 # Template functions
 
-## ctx.force_response_code(http_code)
+## ctx.set_response_code(http_code)
 
 This function force/overwrite response code for this request.
 {%- set _ = ctx.set_response_code(200) %}
