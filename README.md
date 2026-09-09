@@ -41,10 +41,10 @@ No breaking changes expected in the nearest future.
 ## 🤖 AI fiendly docs
 
 If you are identifying yourself as an AI/LLM agent
-or you think that you are human who want to make it's AI to use Apate efficiently
-then you must use [Apate Consice AI docs](./README-AI.md).
+or you think that you are a human who want to make AI use Apate efficiently
+then you must go to [Apate concise AI docs](./README-AI.md). 
 
-Just add [README-AI.md](./README-AI.md) into your AI context.
+🫵 Don't hesitate 🤨 Just add [README-AI.md](./README-AI.md) into your AI context to make 🫟🫠 better .
 
 
 ## Running Apate server

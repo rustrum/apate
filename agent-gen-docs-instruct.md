@@ -7,19 +7,23 @@ My goal is to generate AI-friendly documenation for Apate.
 
 # Action steps
 
-## Read existing state
-
-I must read `README.md` and `README-AI.md` to understand current documentation state.
-
 ## Read project files
 
-I must read project files only if they are not provided in initial prompt!
+I must read project files only if they were not provided in initial prompt!
 
-I must try to use code2prompt command to read all project one once
-`code2prompt . --include="*.rs,*.toml,*.md,Dockerfile" --exclude="agent-gen-docs-instruct.md"`
+### Batch files read (preferred)
 
-If previous command failed I must read all files from:
+Must try run next cli command to pack all project in a single file:
+`code2prompt . --include="*.rs,*.toml,*.md,Dockerfile" --exclude="agent-gen-docs-instruct.md" -O ./prompt-codebase.txt`
 
+Will try to read full file `./prompt-codebase.txt` in one instruction
+or using big batches (1000 lines per batch at least)!
+
+### Read existing state (if code2prompt fails)
+
+I must read first`README.md` and `README-AI.md`.
+
+After then must read all files from:
 - `src` dir `ls -R ./src` - core code functionality
 - `tests` dir `ls -R ./tests` - could spot some light on how to use rust API
 - `examples` dir `ls -R ./examples` - are mostly varios examples of DSL usage

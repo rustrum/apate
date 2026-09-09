@@ -1,28 +1,26 @@
 # Apate — AI Agent Reference
 
 Project version: 0.1.2
+
 Git: 111f206588e7cae5d42eb5a67d442742aaaaf001
 
 > This document is written **for AI agents** (and any tool that consumes it). It is a precise,
 > unambiguous reference of the Apate project: its DSL (TOML specification), its scripting
-> APIs (Jinja/minijinja and Rhai), its Rust test-library API, and how to run it as a
-> Docker image. Prefer this file over `README.md` when generating code or configuration,
-> because it reflects the **actual** code behaviour. Where this document and `README.md`
-> disagree, **this document is correct**.
+> APIs (Jinja/minijinja and Rhai), its Rust test-library API,
+> and how to run it as a Docker image.
+> Prefer this file over `README.md`.
 
 ---
 
 ## 1. Basic overview
 
-**Apate** is an API prototyping / mocking server written in Rust. Its purpose is to help
-with integration and end-to-end testing by returning predictable, pre-defined HTTP
-responses for a set of URIs (paths). It is named after Apate, the Greek goddess of deceit.
+**Apate** is an API prototyping / mocking server and a Rust library.
 
-Two consumption modes exist, both from the **same crate** (`apate` on crates.io):
+Two main usage scenarios:
 
-1. **Standalone server** — a single binary (`apate`) that serves HTTP and ships a small
-   web UI for editing specs. Also distributable as a Docker image.
-2. **Rust test library** — embed the server inside your `#[test]` / `#[tokio::test]` to
+1. **Standalone server** — a single binary `apate` that serves HTTP and ships a small
+   web UI for editing specs on fly. Also distributable as a Docker image.
+2. **Rust test library** — in-process ApateTestServer for `#[test]` / `#[tokio::test]` to
    test client logic against a real local HTTP endpoint without touching the network.
 
 ### Core concepts (vocabulary you will see everywhere)
@@ -816,7 +814,6 @@ Base path: `http://HOST:PORT/apate` (e.g. `http://localhost:8228/apate`).
 | `POST` | `/apate/specs/append` | append TOML specs (request body) after existing |
 | `POST` | `/apate/specs/prepend` | prepend TOML specs (request body) before existing |
 | `GET`  | `/apate` | the web UI (single page app) |
-| `GET`  | `/apate/assets/{file}` | static UI assets |
 
 Example live spec update:
 ```sh
@@ -839,25 +836,7 @@ rebuilt on every update, so changes take effect immediately.
 - **Return binary bytes** → `type = "base64"` or `type = "hex"`.
 - **Modify the body after render** → add a `processor` (`rhai`/`rhai_ref`/`embedded`).
 - **Share a script across endpoints** → define it once in `[[rhai]]`, reference by `id`.
-- **Rust-side logic (signing, crypto, real work)** → embed Apate in your app and register a
-  `PostProcessor`, reference with `type = "embedded"`.
 - **Unit-test a client against a local API** → use `ApateTestServer::start(config, 0)`.
-
-## 9. Source map (where things live)
-
-| Concern | File(s) |
-|---------|---------|
-| Public API, `ApateConfig`, `ApateSpecs`, server bootstrap | `src/lib.rs` |
-| `Deceit`, `DeceitResponse`, builders, response context | `src/deceit.rs` |
-| Matchers (`Matcher` enum + evaluation) | `src/matchers.rs` |
-| Output rendering (`OutputType`, Jinja/Hex/Base64/Rhai) | `src/output.rs` |
-| Processors (`Processor`, `PostProcessor`, `ApateProcessor`) | `src/processors.rs` |
-| Jinja/minijinja context + global functions | `src/jinja.rs` |
-| Rhai engine, contexts, global functions, storage | `src/rhai.rs` |
-| HTTP request handling pipeline | `src/handlers/mod.rs` |
-| Admin API + web UI | `src/handlers/admin.rs` |
-| Test server (`ApateTestServer`) | `src/test.rs` |
-| CLI entry point | `src/main.rs` |
-| Reference tests | `tests/*.rs` |
-| Reference specs | `examples/*.toml` |
+- **Custom logic depending on Rust libraries** → should embed Apate in your app (custom server) and register a
+  `PostProcessor`, reference with `type = "embedded"`.
 

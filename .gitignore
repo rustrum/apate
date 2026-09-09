@@ -1,4 +1,5 @@
 .env
+prompt-codebase.txt
 
 # Rust
 debug
