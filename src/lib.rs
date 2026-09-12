@@ -31,6 +31,7 @@ use crate::processors::ApateProcessor;
 use crate::rhai::{RhaiScript, RhaiState};
 
 pub const DEFAULT_PORT: u16 = 8228;
+
 pub const DEFAULT_RUST_LOG: &str = "info,apate=debug";
 
 #[derive(Debug)]
@@ -303,6 +304,9 @@ fn init_actix_web_server(config: ApateConfig) -> std::io::Result<Server> {
         {
             app = app
                 .service(web::scope(handlers::ADMIN_API).configure(handlers::admin_service_config));
+            // Maybe MCP should be under another feature
+            app =
+                app.service(web::scope(handlers::MCP_API).configure(handlers::mcp_service_config));
         }
         app.default_service(web::to(handlers::apate_server_handler))
     })

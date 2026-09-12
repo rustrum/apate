@@ -828,7 +828,9 @@ rebuilt on every update, so changes take effect immediately.
 
 ---
 
-## 8. Quick decision guide for an AI agent
+## 8. Importan notes for AI agent
+
+### 8.1 Quick decision guide
 
 - **Static / fixed response** → `type = "string"` (or omit `type`).
 - **Echo request data / light conditionals / randoms** → `type = "jinja"`.
@@ -840,3 +842,18 @@ rebuilt on every update, so changes take effect immediately.
 - **Custom logic depending on Rust libraries** → should embed Apate in your app (custom server) and register a
   `PostProcessor`, reference with `type = "embedded"`.
 
+### 8.2 DSL syntax tweaks & WTFs
+
+TOML triple quote string is multiline and should be treated as raw text.
+No need to escape quotes inside triple quotes text block.
+
+In the next example script string has 4 lines because triple quotes are on separate lines.
+```toml
+script = """
+let a = 1; // line number 2
+let b = 2; // line number 3
+"""
+```
+Consider it while reading error messages.
+
+Rhai JSON objects are using CUSTOM syntax `#{ name: "John", surname: "Smith" }` with `#` prefix.

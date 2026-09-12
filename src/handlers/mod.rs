@@ -2,11 +2,15 @@
 
 #[cfg(feature = "server")]
 mod admin;
+#[cfg(feature = "server")]
+mod mcp;
 
 use std::sync::atomic::Ordering;
 
 #[cfg(feature = "server")]
 pub use admin::{ADMIN_API, admin_service_config};
+#[cfg(feature = "server")]
+pub use mcp::{MCP_API, mcp_service_config};
 
 use actix_web::{
     HttpRequest, HttpResponse, HttpResponseBuilder,

@@ -14,10 +14,10 @@ I must read project files only if they were not provided in initial prompt!
 ### Batch files read (preferred)
 
 Must try run next cli command to pack all project in a single file:
-`code2prompt . --include="*.rs,*.toml,*.md,Dockerfile" --exclude="agent-gen-docs-instruct.md" -O ./prompt-codebase.txt`
+`code2prompt . --include="*.rs,*.toml,*.md,Dockerfile" --exclude="agent-gen-docs-instruct.md" -O ./prompt-codebase.txt && echo "Total lines count: $(wc -l ./prompt-codebase.txt)"`
 
-Will try to read full file `./prompt-codebase.txt` in one instruction
-or using big batches (1000 lines per batch at least)!
+Will read exact lines count from the file `./prompt-codebase.txt` 
+If read tool will return trimmed content I will try to read again in batches untill the last file line!
 
 ### Read existing state (if code2prompt fails)
 
@@ -51,8 +51,12 @@ I will validate that updated `README-AI.md` is not containing any new errors.
 # Documentation structure rules
 
 Documentation must be in AI-friendly format:
-only concise straightforward notions,
-no additional explanations of the things already described in the doc.
+
+ - all info must be in one place must not require to read other project docs & examples
+ - only concise straightforward notions
+ - do not duplicate information
+ - only AI-friendly explanation and formatting allowed
+ - I must not copy examples as-is I must generalize things do avoid dummy duplication
 
 Docs header must contains project version from `Cargo.toml` and latest git commit hash.
 
@@ -67,7 +71,7 @@ Docs header must contains project version from `Cargo.toml` and latest git commi
 - Hints how to run from Docker image
 - Using as a rust test library
 - Extending server with custom processors - this section should be as short as possible
-
+- Section with important notes should clarify important corner cases and DSL usage decision hints
 
 # Important
 
