@@ -1,8 +1,6 @@
 # Apate — AI Agent Reference
 
-Project version: 0.1.2
-
-Git: 111f206588e7cae5d42eb5a67d442742aaaaf001
+**Project version:** 0.2.0 | **Git:** 3b4b8c4
 
 > This document is written **for AI agents** (and any tool that consumes it). It is a precise,
 > unambiguous reference of the Apate project: its DSL (TOML specification), its scripting
@@ -67,7 +65,11 @@ For every incoming HTTP request, Apate does the following:
 - `default = ["server"]` — the `server` feature enables `getopt3` (CLI parsing) and
   `include_dir` (embedded web UI). The binary target requires `server`.
 - To use Apate **purely as a library** (no web UI, smaller build), disable default features:
-  `apate = { version = "0.1", default-features = false }`.
+  `apate = { version = "0.2", default-features = false }`.
+
+### Rust edition & toolchain
+
+Apate uses **Rust edition 2024**. The project requires Rust **1.98+** (see `rust-toolchain.toml`).
 
 ---
 
@@ -219,7 +221,6 @@ with Jinja2-compatible syntax. Full syntax reference:
 | `random_hex()`                        | random HEX string (32 bytes → 64 chars)    |
 | `random_hex(bytes_len)`               | random HEX string of `bytes_len` bytes     |
 | `uuid_v4()`                           | a random UUID v4 (string)                  |
-| `set_response_code(code)`           | **sets/overwrites** the response status code for this request |
 
 > All `random_*`/`uuid_v4` return **strings** (not numbers) in Jinja.
 
@@ -548,7 +549,7 @@ with any HTTP client, and it is automatically shut down when the server handle i
 
 ```toml
 [dev-dependencies]
-apate = "0.1"          # test-only dependency
+apate = "0.2"          # test-only dependency
 reqwest = { version = "0.12", features = ["blocking", "json"] }
 serial_test = "3"      # to serialize tests that share the default port
 ```
@@ -762,7 +763,7 @@ CLI arguments (higher priority than env vars) and env configuration: see §7.3.
 ### 7.2 Run from Docker image
 
 Official image: `ghcr.io/rustrum/apate`. The container runs the `apate` binary, listens on
-port **8228**, and starts with **no specs** (add them via UI or API).
+port **8228**, and starts with **no specs** (add them via UI or API). Use tag `latest` for this version.
 
 #### 7.2.1 Run an empty server
 
@@ -819,16 +820,23 @@ Example live spec update:
 ```sh
 curl -X POST http://localhost:8228/apate/specs/replace -d @./new-specs.toml
 curl http://localhost:8228/apate/specs        # dump current specs as TOML
-curl http://localhost:8228/apate/info         # {"name":"Apate API mocking server","version":"0.1.2"}
+curl http://localhost:8228/apate/info         # {"name":"Apate API mocking server","version":"0.2.0"}
 ```
 
 All `POST` spec endpoints accept a TOML document (the same shape as §2) in the request body
 and return a plain-text confirmation. The specs cache (Jinja + Rhai AST) is cleared and
 rebuilt on every update, so changes take effect immediately.
 
+### 7.5 MCP API (`/mcp`) — Model Context Protocol
+
+Apate exposes an MCP server at `http://HOST:PORT/mcp` for LLM tool integration. Two tools are available:
+
+- **`specs_get`** — returns the current active specification as TOML text (no input required)
+- **`specs_replace`** — replaces the configuration TOML with provided text and returns the stored config (requires `toml` argument)
+
 ---
 
-## 8. Importan notes for AI agent
+## 8. Important notes for AI agent
 
 ### 8.1 Quick decision guide
 

@@ -71,6 +71,7 @@ Docs header must contains project version from `Cargo.toml` and latest git commi
 - Hints how to run from Docker image
 - Using as a rust test library
 - Extending server with custom processors - this section should be as short as possible
+- MCP protocol description must briefly describe only tools not whole MCP protocol
 - Section with important notes should clarify important corner cases and DSL usage decision hints
 
 # Important
