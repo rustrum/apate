@@ -184,8 +184,16 @@ receives the body produced by the previous step.
 
 - `embedded` is only available when Apate is embedded in your own Rust application
   (see §5 and the `PostProcessor` trait). It references a processor registered by `id`.
+- The processor script must return a Blob, or unit for empty body.
 - A processor that returns **no value** (empty) leaves the body unchanged.
 
+Important: `rhai_ref` DSL has **different** syntax, NOT like matcher/processor `rhai_ref`.
+Correct syntax for `rhai_ref` processor is:
+
+```toml
+[[deceit.responses]]
+type = { rhai_ref = { id = "script-id", args = ["arg1", "arg2"] } }
+```
 ### 2.6 Rhai script registry (TOML: `[[rhai]]`)
 
 Named, reusable Rhai scripts referenced by `id` from matchers, outputs, and processors
@@ -691,45 +699,13 @@ async fn multi_endpoint_test() {
 
 ### 6.7 Registering a custom Rust `PostProcessor`
 
+Embed Apate in your application and register a `PostProcessor` via `ApateConfigBuilder::register_processor`.
+
 ```rust
-use apate::ApateConfigBuilder;
-use apate::deceit::{DeceitBuilder, DeceitResponseBuilder, DeceitResponseContext};
-use apate::processors::{ApateProcessor, PostProcessor, Processor};
-use apate::test::ApateTestServer;
-
-struct MySigner;
-impl PostProcessor for MySigner {
-    fn process(
-        &self,
-        _input: &[&str],
-        _ctx: &DeceitResponseContext,
-        response: &[u8],
-    ) -> Result<Option<Vec<u8>>, Box<dyn core::error::Error>> {
-        // `response` is the rendered body as bytes. Return Some(new) to replace it,
-        // or None to keep the original body.
-        let mut v = response.to_vec();
-        v.extend(b" SIGNED");
-        Ok(Some(v))
-    }
-}
-
-#[test]
-fn embedded_processor_test() {
-    let config = ApateConfigBuilder::default()
-        .register_processor(ApateProcessor::post("signer", Box::new(MySigner)))
-        .add_deceit(
-            DeceitBuilder::with_uris(&["/tx"])
-                .add_processor(Processor::Embedded { id: "signer".into(), args: vec![] })
-                .add_response(DeceitResponseBuilder::default().with_output("body").build())
-                .build(),
-        )
-        .build();
-
-    let _apate = ApateTestServer::start(config, 0);
-    let client = reqwest::blocking::Client::new();
-    let r = client.get("http://localhost:8228/tx").send().unwrap();
-    assert_eq!(r.text().unwrap(), "body SIGNED");
-}
+// In your app
+let config = ApateConfigBuilder::default()
+    .register_processor(ApateProcessor::post("my_id", Box::new(MyProcessor)))
+    .build();
 ```
 
 ### 6.8 Test authoring notes (gotchas)

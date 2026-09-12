@@ -3,9 +3,13 @@
 </p>
 
 <p align="center" width="100%" style="text-align:center">
-<a href="https://crates.io/crates/apate"><img src="https://img.shields.io/crates/v/apate.svg" alt="Crates.io"></a>
-<a href="https://docs.rs/apate"><img src="https://docs.rs/apate/badge.svg" alt="Released API docs"></a>
-<p align="center" width="100%" style="text-align:center">
+<a href="https://crates.io/crates/apate"><img src="https://img.shields.io/crates/v/apate?style=for-the-badge&logo=rust" alt="Crates.io"></a>
+<a href="https://docs.rs/apate"><img src="https://img.shields.io/docsrs/apate?style=for-the-badge&logo=docs.rs" alt="Released API docs"></a>
+<a href="https://x.com/rumatoest"><img src="https://img.shields.io/twitter/follow/rumatoest?style=for-the-badge&color=blue&logo=x&label=rumatoest" alt="Follow me on X(twitter)" /></a>
+<a href="https://www.threads.com/@rumatoest"><img src="https://img.shields.io/badge/rumatoest-%20-black?style=for-the-badge&logo=threads&color=black" alt="Threads" /></a>
+<a href="https://www.reddit.com/user/rumatoest"><img src="https://img.shields.io/reddit/user-karma/combined/rumatoest?style=for-the-badge&color=f3562e&logo=reddit&label=u/rumatoest" alt="Follow me on reddit"/></a>
+<!-- https://img.shields.io/hackernews/user-karma/rumatoest?style=for-the-badge&color=ff6600&label=Me+on+Hacker+News -->
+</p>
 
 
 API prototyping and mocking server that main purpose is to help with integration and end-to-end testing.
@@ -38,13 +42,15 @@ No breaking changes expected in the nearest future.
  - 📋 **API server prototyping** - it could be convenient to have working API endpoint before implementing whole server logic
 
 
-## 🤖 AI fiendly docs
+## 🤖 AI fiendly stuff
 
 If you are identifying yourself as an AI/LLM agent
 or you think that you are a human who want to make AI use Apate efficiently
 then you must go to [Apate concise AI docs](./README-AI.md). 
 
 🫵 Don't hesitate 🤨 Just add [README-AI.md](./README-AI.md) into your AI context to make 🫟🫠 better .
+
+**MCP server** provided at URI: `/mcp` allows to read and replace current mocking specification.
 
 
 ## Running Apate server
