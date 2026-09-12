@@ -5,8 +5,8 @@ edition = "2024"
 homepage = "https://github.com/rustrum/apate"
 repository = "https://github.com/rustrum/apate.git"
 license-file = "LICENSE-TERMS"
-description = "API mocking server & rust unit tests library to mimic 3rd party API endpoints."
-keywords = ["api", "rest", "mocking", "mockserver", "testing", "mcp"]
+description = "API mocking server & rust unit tests library server to mock http endpoints."
+keywords = ["api", "rest", "mock", "http", "testing"]
 
 [[bin]]
 name = "apate"
