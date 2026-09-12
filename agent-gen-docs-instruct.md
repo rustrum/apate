@@ -15,15 +15,15 @@ I must read project files only if they were not provided in initial prompt!
 
 Must try run next cli command to pack all project in a single file:
 `code2prompt . --include="*.rs,*.toml,*.md,Dockerfile" --exclude="agent-gen-docs-instruct.md" -O ./prompt-codebase.txt && echo "Total lines count: $(wc -l ./prompt-codebase.txt)"`
-
-Will read exact lines count from the file `./prompt-codebase.txt` 
-If read tool will return trimmed content I will try to read again in batches untill the last file line!
+IMPORTANT! Will read `./prompt-codebase.txt` in batches because of read file tool internal limits.
+Must validate that numer or readed lines matches value reported in CLI while executing `code2prompt`.
 
 ### Read existing state (if code2prompt fails)
 
-I must read first`README.md` and `README-AI.md`.
+Must skip individual files read only if `prompt-codebase.txt` was not generated.
 
-After then must read all files from:
+Will read first`README.md` and `README-AI.md`.
+After then read all files from:
 - `src` dir `ls -R ./src` - core code functionality
 - `tests` dir `ls -R ./tests` - could spot some light on how to use rust API
 - `examples` dir `ls -R ./examples` - are mostly varios examples of DSL usage
