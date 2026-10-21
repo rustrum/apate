@@ -20,7 +20,7 @@ server = ["getopt3", "include_dir"]
 
 [dependencies]
 actix-router = "0.5"
-actix-web = { version = "4.15", features = ["rustls"] }
+actix-web = { version = "4.17", features = ["rustls"] }
 async-lock = { version = "3.4", features = ["std"] }
 base64 = "0.22"
 color-eyre = "0.6"
