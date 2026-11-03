@@ -1,0 +1,141 @@
+name: Release
+
+on:
+  release:
+    types: [published]
+
+permissions:
+  contents: write
+  packages: write
+
+jobs:
+  build:
+    name: Build - ${{ matrix.target }}
+    runs-on: ${{ matrix.runner }}
+    strategy:
+      matrix:
+        include:
+          # Linux x86_64
+          - target: x86_64-unknown-linux-gnu
+            # Older glibc ensures portability across older distros
+            runner: ubuntu-22.04
+            rustflags: '-C target-feature=+crt-static'
+            apt_packages: ''
+          - target: x86_64-unknown-linux-musl
+            runner: ubuntu-latest
+            rustflags: '-C target-feature=+crt-static'
+            apt_packages: 'musl-tools'
+
+          # Linux ARM64 (Raspberry Pi, AWS Graviton, etc.)
+          - target: aarch64-unknown-linux-gnu
+            runner: ubuntu-22.04-arm
+            rustflags: '-C target-feature=+crt-static'
+            apt_packages: ''
+          - target: aarch64-unknown-linux-musl
+            runner: ubuntu-22.04-arm
+            rustflags: '-C target-feature=+crt-static'
+            apt_packages: 'musl-tools'
+
+          # macOS ARM64 (Apple Silicon)
+          - target: aarch64-apple-darwin
+            runner: macos-14
+            # macOS does not support static CRT linking
+            rustflags: ''
+            apt_packages: ''
+
+          # Windows x86_64
+          - target: x86_64-pc-windows-msvc
+            runner: windows-latest
+            rustflags: '-C target-feature=+crt-static'
+            apt_packages: ''
+
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Setup Rust
+        uses: actions-rust-lang/setup-rust-toolchain@v1
+        with:
+          target: ${{ matrix.target }}
+          rustflags: '' # Prevent default "-D warnings" from interfering with our flags
+
+      - name: Install dependencies (Linux)
+        if: runner.os == 'Linux' && matrix.apt_packages != ''
+        run: sudo apt-get update && sudo apt-get install -y ${{ matrix.apt_packages }}
+
+      - name: Build
+        run: cargo build --release --target ${{ matrix.target }}
+        env:
+          RUSTFLAGS: ${{ matrix.rustflags }}
+
+      - name: Package (Unix)
+        if: runner.os != 'Windows'
+        run: tar -czvf apate-${{ matrix.target }}.tar.gz -C target/${{ matrix.target }}/release apate
+
+      - name: Package (Windows)
+        if: runner.os == 'Windows'
+        run: Compress-Archive target/${{ matrix.target }}/release/apate.exe apate-${{ matrix.target }}.zip
+
+      - name: Upload Artifact
+        uses: actions/upload-artifact@v7
+        with:
+          name: apate-${{ matrix.target }}
+          path: apate-${{ matrix.target }}.*
+
+
+  publish:
+    name: Publish Release Assets
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - name: Download All Artifacts
+        uses: actions/download-artifact@v8
+        with:
+          path: release-artifacts
+          merge-multiple: true
+
+      - name: Publish Binaries
+        uses: softprops/action-gh-release@v2
+        with:
+          files: release-artifacts/*
+
+
+  build-docker:
+    name: Publish Docker Image
+    needs: publish
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v7
+
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v4
+
+      - name: Log in to GHCR
+        uses: docker/login-action@v4
+        with:
+          registry: ghcr.io
+          username: ${{ github.repository_owner }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Extract Tag
+        id: tag
+        run: |
+          FULL_TAG=${{ github.ref_name }}
+          echo "TAG=${FULL_TAG#v}" >> $GITHUB_OUTPUT
+
+      - name: Build and push Docker image
+        uses: docker/build-push-action@v7
+        with:
+          context: .
+          file: ./release.Dockerfile
+          push: true
+          platforms: linux/amd64,linux/arm64
+          build-args: |
+            GH_TAG=${{ github.ref_name }}
+          tags: |
+            ghcr.io/${{ github.repository_owner }}/apate:${{ steps.tag.outputs.TAG }}
+            ghcr.io/${{ github.repository_owner }}/apate:latest
+

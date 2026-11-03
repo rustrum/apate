@@ -1,9 +1,10 @@
 name: Build and Publish Docker Image
 
 on:
-  push:
-    tags:
-      - 'v*.*.*'
+  workflow_dispatch:
+  # push:
+  #   tags:
+  #     - 'v*.*.*'
 
 jobs:
   build-and-publish:

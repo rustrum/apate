@@ -32,7 +32,7 @@ use crate::rhai::{RhaiScript, RhaiState};
 
 pub const DEFAULT_PORT: u16 = 8228;
 
-pub const DEFAULT_RUST_LOG: &str = "info,apate=debug";
+pub const DEFAULT_RUST_LOG: &str = "info,apate=info";
 
 #[derive(Debug)]
 pub struct ApateConfig {
