@@ -3,7 +3,7 @@ use std::{
     sync::{Arc, RwLock, atomic::Ordering},
 };
 
-use rand::{Rng as _, RngCore as _};
+use rand::{Rng as _, RngExt as _};
 use rhai::{
     AST, Blob, Dynamic, Engine, EvalAltResult, Map as RhaiMap, ParseError, ParseErrorType, Position,
 };

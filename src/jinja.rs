@@ -7,7 +7,7 @@ use minijinja::{
     Environment, State, Value, context,
     value::{Object, ObjectRepr},
 };
-use rand::{Rng as _, RngCore as _};
+use rand::{Rng as _, RngExt as _};
 use uuid::Uuid;
 
 use crate::deceit::DeceitResponseContext;
@@ -56,7 +56,7 @@ impl Object for MiniJinjaResponseContext {
 
     fn call_method(
         self: &Arc<Self>,
-        _state: &State<'_, '_>,
+        _state: &mut State<'_, '_>,
         method: &str,
         args: &[Value],
     ) -> Result<Value, minijinja::Error> {
@@ -73,7 +73,7 @@ impl Object for MiniJinjaResponseContext {
                 }
             }
             "load_body_json" => match self.ctx.req.load_body_as_json() {
-                Ok(v) => Ok(Value::from_serialize(v.as_ref())),
+                Ok(v) => Ok(Value::from(minijinja::value::Serde(v.as_ref()))),
                 Err(e) => {
                     log::error!("Can't parse response body as JSON: {e}");
                     Err(minijinja::Error::from(minijinja::ErrorKind::CannotUnpack))

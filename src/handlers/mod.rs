@@ -59,6 +59,8 @@ async fn deceit_handler(req: HttpRequest, body: Bytes, state: Data<ApateState>) 
 
         log::debug!("Deceit {deceit_ref} matched (^_^). Processing response: {idx}");
 
+        let response_ref = deceit_ref.with_level(idx);
+
         let Some(dresp) = d.responses.get(idx) else {
             log::error!("Wow we definitely must have response for this index {idx}");
             continue;
@@ -83,7 +85,7 @@ async fn deceit_handler(req: HttpRequest, body: Bytes, state: Data<ApateState>) 
         }
 
         let output_body = crate::output::output_response_body(
-            &deceit_ref,
+            &response_ref,
             &dresp.output_type,
             &dresp.output,
             &drctx,
@@ -98,7 +100,7 @@ async fn deceit_handler(req: HttpRequest, body: Bytes, state: Data<ApateState>) 
                 prcs.extend(dresp.processors.iter());
 
                 match apply_processors(
-                    &deceit_ref,
+                    &response_ref,
                     &state.processors,
                     &prcs,
                     &drctx,

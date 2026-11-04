@@ -238,3 +238,46 @@ async fn complex_configuration_test() {
 
     assert_eq!(response_json["id"], "1133");
 }
+
+#[test]
+#[serial]
+fn jinja_responses_in_same_deceit_use_their_own_template() {
+    let config = DeceitBuilder::with_uris(&["/multi-jinja"])
+        .add_response(
+            DeceitResponseBuilder::default()
+                .add_matcher(Matcher::QueryArg {
+                    name: "kind".to_string(),
+                    value: "bad".to_string(),
+                    negate: false,
+                })
+                .with_output_type(OutputType::Jinja)
+                .with_output(r#"bad: {{ ctx.load_query_args().kind }}"#)
+                .build(),
+        )
+        .add_response(
+            DeceitResponseBuilder::default()
+                .with_output_type(OutputType::Jinja)
+                .with_output(r#"good: {{ ctx.load_query_args().kind }}"#)
+                .build(),
+        )
+        .to_app_config();
+
+    let _apate = ApateTestServer::start(config, INIT_DELAY_MS);
+    let client = reqwest::blocking::Client::new();
+
+    // Render the first Jinja response so its template is cached.
+    let response = client
+        .get(api_url("/multi-jinja?kind=bad"))
+        .send()
+        .expect("request failed");
+    assert_eq!(response.status(), 200);
+    assert_eq!(response.text().unwrap(), "bad: bad");
+
+    // The second Jinja response must render its own template.
+    let response = client
+        .get(api_url("/multi-jinja?kind=good"))
+        .send()
+        .expect("request failed");
+    assert_eq!(response.status(), 200);
+    assert_eq!(response.text().unwrap(), "good: good");
+}

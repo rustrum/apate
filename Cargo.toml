@@ -1,11 +1,11 @@
 [package]
 name = "apate"
-version = "0.2.1"
+version = "0.3.0"
 edition = "2024"
 homepage = "https://github.com/rustrum/apate"
 repository = "https://github.com/rustrum/apate.git"
 license-file = "LICENSE-TERMS"
-description = "API mocking server & rust unit tests library server to mock http endpoints."
+description = "API mocking server & rust unit tests library server to mock HTTP endpoints. Use TOML based DSL with Jinja templeas and Rhai scripting."
 keywords = ["api", "rest", "mock", "http", "testing"]
 
 [[bin]]
@@ -19,31 +19,31 @@ default = ["server"]
 server = ["getopt3", "include_dir"]
 
 [dependencies]
-actix-router = "0.5"
-actix-web = { version = "4.17", features = ["rustls"] }
-async-lock = { version = "3.4", features = ["std"] }
-base64 = "0.22"
-color-eyre = "0.6"
-env_logger = "0.11"
-futures = { version = "0.3", features = ["thread-pool"] }
-hex = "0.4"
-jsonpath-rust = "1.0"
-log = "0.4"
-minijinja = { version = "2.12.0", features = ["loader", "json"] }
-rand = "0.9"
-rhai = { version = "1.26", features = ["sync", "no_custom_syntax", "serde"] }
-serde = { version = "1.0", features = ["derive"] }
-serde_json = "1.0"
-serde_urlencoded = "0.7"
-tokio = { version = "1", features = ["full"] }
-toml = "1.1.4"
-uuid = { version = "1.18", features = ["v4"] }
+actix-router = "0.5.4"
+actix-web = { version = "4.18", features = ["rustls"] }
+async-lock = { version = "3.5", features = ["std"] }
+base64 = "0.23"
+color-eyre = "0.6.5"
+env_logger = "0.11.11"
+futures = { version = "0.3.34", features = ["thread-pool"] }
+hex = "0.4.3"
+jsonpath-rust = "1.0.12"
+log = "0.4.35"
+minijinja = { version = "3.0.5", features = ["json", "serde"] }
+rand = "0.10"
+rhai = { version = "1.27", features = ["sync", "no_custom_syntax", "serde"] }
+serde = { version = "1.0.229", features = ["derive"] }
+serde_json = "1.0.154"
+serde_urlencoded = "0.7.1"
+tokio = { version = "1.54", features = ["full"] }
+toml = "1.2.0"
+uuid = { version = "1.29", features = ["v4"] }
 
 # server dependencies
-getopt3 = { version = "2.5.0", optional = true }
-include_dir = { version = "0.7", optional = true }
+getopt3 = { version = "2.6.1", optional = true }
+include_dir = { version = "0.7.4", optional = true }
 
 [dev-dependencies]
-include_dir = { version = "0.7" }
-reqwest = { version = "0.12", features = ["json", "blocking"] }
-serial_test = "3"
+include_dir = { version = "0.7.4" }
+reqwest = { version = "0.13", features = ["json", "blocking"] }
+serial_test = "4.0.1"

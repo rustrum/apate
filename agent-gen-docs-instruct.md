@@ -91,9 +91,10 @@ Docs header must contains project version from `Cargo.toml` and latest git commi
 
 - Brief Apate features overview
 - TOML DSL specification
-    - Rhai script API
+    - Rhai script API from apate
     - Jinja templates API
 - Basic DSL usage examples
+- Compact Rhai script reference imported as-is from this cheat-sheet https://raw.githubusercontent.com/rhaiscript/rhai/refs/heads/main/RHAI-CHEATSHEET.md
 - Hints now to run apate server locally from cli (including how to install from cargo)
 - Hints how to run from Docker image
 - Using as a rust test library

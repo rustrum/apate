@@ -14,129 +14,149 @@
 </p>
 
 
-API prototyping and mocking server that main purpose is to help with integration and end-to-end testing.
-Project named after Apate - the goddess and personification of deceit.
+An API prototyping and mocking server whose main purpose is to help with integration and end-to-end testing.
+The project is named after Apate - the goddess and personification of deceit.
 
 🚀 Project is stable.
 Almost everything works as it was planned.
 I will wait some time for user feedback.
-No breaking changes expected in the nearest future.
+No breaking changes are expected in the near future.
 
 
 ## Features
 
- - 💻⚙️ Standalone server app with web UI 
- - 🔃 Live specs reloading via UI or API
+ - 💻⚙️ Standalone server app with a web UI
+ - 🔃 Live spec reloading via UI or API
  - 🎭 Mocking any string & binary responses
- - ⛩️ Jinja templates to customize response body
+ - ⛩️ Jinja templates to customize response bodies
  - 🌿 [Rhai](https://rhai.rs) scripting for advanced scenarios
- - 💾 In memory persistence to mimic DB behavior in some cases   
- - 🛠️ Unit tests friendly rust library
- - 🦀 Ability to build custom mocking server with your rust extensions
+ - 💾 In-memory persistence to mimic DB behavior in some cases
+ - 🛠️ Unit-test friendly Rust library
+ - 🦀 Ability to build a custom mocking server with your Rust extensions
 
 
 ## Why do you need it ❔
 
- - 👨🏻‍💻 **local development** - to do not run/build other services locally or call external APIs
- - 🦀 **rust unit tests** - to test your client logic without shortcuts
- - 💻🛠️⚙️ **integration tests** - if 3rd party API provider suck/stuck/etc it is better to run test suites against predictable API endpoints.
- - 💻🏋🏻‍♂️ **load tests** - when deployed alongside your application Apate should respond fast, so no need to take external API delays into account.
- - 📋 **API server prototyping** - it could be convenient to have working API endpoint before implementing whole server logic
+ - 👨🏻‍💻 **local development** - so you don't have to run/build other services locally or call external APIs
+ - 🦀 **Rust unit tests** - to test your client logic without shortcuts
+ - 💻🛠️⚙️ **integration tests** - if a third-party API provider sucks, is stuck, etc., it is better to run test suites against predictable API endpoints.
+ - 💻🏋🏻‍♂️ **load tests** - when deployed alongside your application, Apate should respond fast, so you don't need to take external API delays into account.
+ - 📋 **API server prototyping** - it can be convenient to have a working API endpoint before implementing the whole server logic
 
 
-## 🤖 AI fiendly stuff
+## 🤖 AI friendly stuff
 
-If you are identifying yourself as an AI/LLM agent
-or you think that you are a human who want to make AI use Apate efficiently
-then you must go to [Apate concise AI docs](./README-AI.md). 
+If you identify yourself as an AI/LLM agent,
+or you think that you are a human who wants to make AI use Apate efficiently,
+then you should go to [Apate concise AI docs](./README-AI.md).
 
-🫵 Don't hesitate 🤨 Just add [README-AI.md](./README-AI.md) into your AI context to make 🫟🫠 better .
+🫵 Don't hesitate 🤨 Just add [README-AI.md](./README-AI.md) into your AI context to make 🫟🫠 better.
 
-**MCP server** provided at URI: `/mcp` allows to read and replace current mocking specification.
+**MCP server** provided at the URI `/mcp` allows reading and replacing the current mocking specification.
 
 
-## Running Apate server
+## Install and run Apate server
+
+### Build from sources via cargo
+
+If you have `cargo` installed, run `cargo install apate`.
+After that you will have `apate` binary in your `$PATH`.
 
 ### Docker image
 
-Launching a clean disposable container is easy with docker.
+Launching a clean, disposable container is easy with Docker.
 
 ```sh
 docker run --rm -tp 8228:8228 ghcr.io/rustrum/apate:latest
 ```
 
-It will run Apate server without any URI deceit.
-So you should add new specification via API endpoints or web UI (see below).
+It will run the Apate server without any URI deceit.
+So you should add a new specification via the API endpoints or the web UI (see below).
 
-To start server with some specs mount your TOML specs into docker image and provide proper ENV variables.
+To start the server with some specs, mount your TOML specs into the Docker image and provide the proper environment variables.
 
 ```sh
-docker run --rm -tp 8228:8228 -v $(pwd)/examples:/specs -e APATHE_SPECS_FILE_1=/specs/apate-specs.toml ghcr.io/rustrum/apate:latest
+docker run --rm -tp 8228:8228 -v $(pwd)/examples:/specs -e APATE_SPECS_FILE_1=/specs/apate-specs.toml ghcr.io/rustrum/apate:latest
 ```
 
-Example above expecting you to execute `docker run` from the Apate git repository root.
+The example above expects you to run `docker run` from the root of the Apate git repository.
 
-### Install & run locally via cargo
+### AUR repository for Arch, Manjaro, Omarchy etc.
 
-If you have `cargo` then just install it as `cargo install apate`.
-After that you will have `apate` binary in your `$PATH`.
+Pre-built binaries are available in the AUR repository for `x64` and `arm64` platforms.
+
+```sh
+yay -S apate
+```
+
+### Homebrew for Mac and Linux
+
+It contains binaries for arm64 Mac and arm64/x64 Linux.
+
+```sh
+# Add our tap first
+brew tap rustrum/releases # adding the tap to my custom keg :)
+brew trust rustrum/releases # you can trust me for sure
+brew install apate # this will install the binary
+```
 
 
 ## Apate server configuration
 
 ### Web UI
 
-Apate web UI is located at `http://HOST:PORT/apate` (will be `http://localhost:8228/apate` for most cases).
-Works for docker too.
+The Apate web UI is located at `http://HOST:PORT/apate` (usually `http://localhost:8228/apate`).
+It works with Docker too.
 
-**Please notice** that specification shown in web UI is not looking cool.
-All because it is automatically generated from the internal representation.
-Please see `examples` folder to figure out how to write TOML specs in pretty way.
+**Please note** that the specification shown in the web UI does not look great.
+That is because it is automatically generated from the internal representation.
+See the `examples` folder to learn how to write TOML specs in a pretty way.
 
 ### ENV variables and CLI args
 
-You could use next ENV variables:
+You can use the following environment variables:
 
  - `RUST_LOG` and `RUST_LOG_STYLE` - to configure logging
- - `APATHE_PORT` - to provide port to run server on (default 8228)
- - `APATHE_SPECS_FILE...` - any ENV variable which name is started with such prefix will be parsed as a path to spec file
+ - `APATE_PORT` - to provide the port to run the server on (default: 8228)
+ - `APATE_SPECS_FILE...` - any environment variable whose name starts with this prefix is parsed as a path to a spec file
 
-Apate can be also configured with CLI arguments which has higher priority than ENV variables.
+Apate can also be configured with CLI arguments, which have higher priority than environment variables.
 
 ```sh
 apate -p 8080 -l warn ./path/to/spec.toml ./path/to/another_spec.toml
 ```
 
-- `-p` - port to run server on
-- `-l` - logging level
-- positional arguments - paths to spec files
+- `-p` - port to run the server on
+- `-l` - logging filter (env_logger syntax, e.g. `warn` or `info,apate=debug`)
+- positional arguments - paths to the spec files
 
 ### REST API
 
 If you like `curl` you can configure Apate while it is running.
 
-- GET `/apate/info` - returns JSON with basic info about current server
-- GET `/apate/specs` - return TOML with a specs file
-- POST `/apate/specs/replace` - replace current specs with a new one from the request body
-- POST `/apate/specs/append` - add specs from request after existing
-- POST `/apate/specs/prepend` - add specs from request before existing
+- GET `/apate/info` - returns JSON with basic info about the current server
+- GET `/apate/specs` - returns TOML with the spec files
+- POST `/apate/specs/replace` - replaces the current specs with new ones from the request body
+- POST `/apate/specs/append` - adds specs from the request after the existing ones
+- POST `/apate/specs/prepend` - adds specs from the request before the existing ones
 
-All POST methods require TOML specification in request body.
-Something like this:
+All POST methods require a TOML specification in the request body.
+For example:
 
 ```sh
 curl -X POST http://localhost:8228/apate/specs/replace -d @./new-specs.toml
 ```
 
 
-## Using Apate in rust tests
+## Using Apate in Rust tests
 
-Some self explanatory tests examples [could be found here](./tests/test-api.rs).
+Some self-explanatory test examples [can be found here](./tests/test-api.rs).
 
-In a nutshell, you should create an instance of Apate server at the beginning of your test.
-And you will be able to call your API endpoints at `http://localhost:8228` (or any other port you'll specify).
+In a nutshell, you should create an instance of the Apate server at the beginning of your test.
+You will then be able to call your API endpoints at `http://localhost:8228` (or any other port you specify).
 
-This is a how it will looks like in the code.
+This is what it looks like in code.
+
 ```rust
 
 /// Yes the test does not require to be async.
@@ -166,32 +186,32 @@ fn my_api_test() {
 
 ## Making your custom Apate server
 
-It is possible to run Apate embedded into your application.
-You may need this to add custom rust logic into response processing.
-For example it could be response signature functionality.
-See [processors](./examples/processors.rs) example.
+It is possible to run Apate embedded in your application.
+You may need this to add custom Rust logic to response processing.
+For example, it could be response signature functionality.
+See the [processors](./examples/processors.rs) example.
 
 
 ## Apate specification
 
-To understand how it works look into [specification example file](./examples/apate-specs.toml), it has verbose comments.
+To understand how it works, look at the [specification example file](./examples/apate-specs.toml); it has verbose comments.
 There are other specification files as well with more advanced examples.
 
-**Rhai** scripting language is used to extend configuration capabilities. 
-See [Rhai website](https://rhai.rs), [Rhai docs](https://rhai.rs/book/ref/index.html) and [configuration examples](./examples/apate-specs-rhai.toml).
+**Rhai** scripting language is used to extend configuration capabilities.
+See the [Rhai website](https://rhai.rs), [Rhai docs](https://rhai.rs/book/ref/index.html) and [configuration examples](./examples/apate-specs-rhai.toml).
 
-I expect that for most cases you will not need any Rhai scripting. It is meant only for complex scenarios.
+In most cases, I expect you will not need any Rhai scripting. It is meant only for complex scenarios.
 
 
 ### Matchers
 
-Piece of DSL or Rhai script that returns boolean. In order to proceed further all matchers must return true.
+A piece of DSL or a Rhai script that returns a boolean. For processing to continue, all matchers must return true.
 
 ### Processors
 
-Runs additional logic that can modify already prepared response body.
+Runs additional logic that can modify the already prepared response body.
 
-Processors are defined using **Rhai script**. Rust processors available only for custom applications.
+Processors are defined using **Rhai scripts**. Rust processors are available only for custom applications.
 
 
 ### Output (response) types
@@ -216,7 +236,7 @@ There are some additional functions & context that is available for Jinja templa
 
 ### Request context
 
-Available for matchers and output rendering.
+Available for matchers and response rendering (Jinja/Rhai outputs and Rhai processors).
 
 #### Jinja request context
 
@@ -225,12 +245,13 @@ Has set of global functions:
 - random_num() || random_num(max) || random_num(from, to) - to return random number
 - random_hex() || random_hex(bytes_len) - return random hex string for some bytes length or default
 - uuid_v4() - returns random UUID v4
+- set_response_code(code) - set/overwrite custom response code for this request
 
 Has global variable `ctx` with next API:
 
 - ctx.method - returns request method
-- ctx.path - returns request path
-- ctx.response_code - get set custom response code if any (default 0 if not set)
+- ctx.path - returns full request path
+- ctx.set_response_code(code) - set/overwrite custom response code for this request
 - ctx.load_headers() -> build request headers map (lowercase keys)
 - ctx.load_query_args() -> build map with URL query arguments
 - ctx.load_path_args() -> build arguments map from specs URIs like `/mypath/{user_id}/{item_id}`

@@ -60,7 +60,7 @@ impl ApateConfig {
         let port = if let Some(p) = port {
             p
         } else {
-            std::env::var("APATHE_PORT")
+            std::env::var("APATE_PORT")
                 .map(|p| p.parse::<u16>().unwrap())
                 .unwrap_or(DEFAULT_PORT)
         };
@@ -105,7 +105,7 @@ impl ApateConfig {
     fn read_paths_from_env() -> Vec<String> {
         std::env::vars()
             .filter_map(|(key, value)| {
-                if key.starts_with("APATHE_SPECS_FILE") {
+                if key.starts_with("APATE_SPECS_FILE") {
                     Some(value)
                 } else {
                     None
