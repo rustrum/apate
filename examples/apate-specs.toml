@@ -12,20 +12,31 @@
 
 # Mocking users list functionality
 [[deceit]]
+# specify one or many URIs that starts with "/"
 uris = ["/user/list"]
+# define response headers
 headers = [["Content-Type", "application/json"]]
+# this matcher allow only GET requests 
 matchers = [{ type = "method", eq = "GET" }]
 
+
+## Now we define responses for the current [[deceit]]
+
+# first reesponse
 [[deceit.responses]]
+# will work only if URI has proper args -> /user/list?name=Ivan
 matchers = [{ type = "query_arg", name = "name", value = "Ivan" }]
 output = """
 [
-    {"id":42, "name":"Ivan", "surname": "Ivanov"},
+    {"id":42, "name":"Ivan", "surname": "Ivanov"}
 ]
 
 """
 
+# second response
+# it will be picked only if first response matcher would fail
 [[deceit.responses]]
+# require -> /user/list?name=Adolph
 matchers = [{ type = "query_arg", name = "name", value = "Adolph" }]
 output = """
 [
@@ -36,14 +47,21 @@ output = """
 
 """
 
+# third response
 [[deceit.responses]]
+# providing HTTP response code
 code = 503
+# require -> /user/list?name=Rajesh
 matchers = [{ type = "query_arg", name = "name", value = "Rajesh" }]
 output = """
 {"message": "Impossible to list them all"}
 
 """
 
+# fourth response
+# Will be handled if matchers in responses defined above failed
+# here we just kinda return all records
+# because there are no query args to filter them
 [[deceit.responses]]
 output = """
 [
@@ -62,6 +80,7 @@ headers = [["Content-Type", "application/json"]]
 matchers = [{ type = "method", eq = "POST" }]
 
 [[deceit.responses]]
+# This will not be OK response because we defined 416 code here
 code = 416
 # There are matchers with types "and"/"or" which can combine other matchers
 matchers = [
@@ -74,7 +93,11 @@ matchers = [
         { type = "json", path = "$.name", eq = "Ramesh" },
     ] },
 ]
+# Output will not be a static content
+# this will be a jinja template that has some access to input context
 type = "jinja"
+# As you can see we can read body as JSON and inject properties into our JSON response
+# BTW with Jinja it is possible to provide any text output not only JSON.
 output = """
 {
     "error": "Name {{ ctx.load_body_json().name }} occupy too much space in our DB.",
@@ -83,6 +106,7 @@ output = """
 
 """
 
+# Another not successfull response
 [[deceit.responses]]
 code = 406
 # Blocking adding any Adolph Hitler into our DB :)
@@ -95,6 +119,8 @@ output = """
 
 """
 
+# This one just emulates records add
+# We return fake id and name/surname from the input
 [[deceit.responses]]
 type = "jinja"
 output = """
@@ -105,6 +131,8 @@ output = """
 
 # Mocking user get functionality
 [[deceit]]
+# Here we have two URIs
+# With matchers it is possible to address query args and path args
 uris = ["/user/{user_id}", "/user"]
 headers = [["Content-Type", "application/json"]]
 matchers = [{ type = "method", eq = "GET" }]
@@ -128,6 +156,7 @@ output = """
 # Also we can use some template engine logic to do tricky  stuff :)
 [[deceit.responses]]
 type = "jinja"
+# Using Jinja scripting capabilities to provide different response based on input
 output = """
 {%- if ctx.load_query_args().id %}
     {%- set id = ctx.load_query_args().id %}

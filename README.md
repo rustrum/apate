@@ -96,8 +96,7 @@ yay -S apate
 It contains binaries for arm64 Mac and arm64/x64 Linux.
 
 ```sh
-# Add our tap first
-brew tap rustrum/releases # adding the tap to my custom keg :)
+brew tap rustrum/releases # add the tap to apate releases
 brew trust rustrum/releases # you can trust me for sure
 brew install apate # this will install the binary
 ```
@@ -196,7 +195,7 @@ See the [processors](./examples/processors.rs) example.
 
 ## Apate specification
 
-To understand how it works, look at the [specification example file](./examples/apate-specs.toml); it has verbose comments.
+To understand how it works, look at the 👉👉[specification example](./examples/apate-specs.toml)👈👈 specs that has verbose comments.
 There are other specification files as well with more advanced examples.
 
 **Rhai** scripting language is used to extend configuration capabilities.
